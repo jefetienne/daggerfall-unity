@@ -511,6 +511,8 @@ namespace DaggerfallWorkshop
 
             DFLocation.BuildingTypes buildingType = buildingData.buildingType;
 
+			Debug.Log("ID:"+obj.ModelIdNum);
+
             // Handle shelves:
             if (shopShelvesObjectGroupIndices.Contains(obj.ModelIdNum - containerObjectGroupOffset))
             {
@@ -546,7 +548,11 @@ namespace DaggerfallWorkshop
                      houseContainerObjectGroupIndices.Contains(obj.ModelIdNum - containerObjectGroupOffset))
             {
                 MakeHouseContainer(obj, go, loadID);
-            }
+            }else if(obj.ModelIdNum == 41102 || obj.ModelIdNum == 41126)
+			{
+				var comp = go.AddComponent<DaggerfallStaticChairs>();
+				comp.ModelIdNum = obj.ModelIdNum;
+			}
         }
 
         private static void MakeHouseContainer(DFBlock.RmbBlock3dObjectRecord obj, GameObject go, ulong loadID)
