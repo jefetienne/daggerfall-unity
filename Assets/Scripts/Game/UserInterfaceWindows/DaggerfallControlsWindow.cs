@@ -250,14 +250,14 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 			CheckDuplicates(allTheKeys);
 		}
 		
-		private string[] GetDuplicates()
+		private List<string> GetDuplicates()
 		{
-			List<Sring> labels = new List<String>();
+			List<String> labels = new List<String>();
 			foreach (String a in actions)
 			{
-                InputManager.Actions action = (InputManager.Actions)Enum.Parse(typeof(InputManager.Actions), a;
+                InputManager.Actions action = (InputManager.Actions)Enum.Parse(typeof(InputManager.Actions), a);
 				//don't do getbinding, have a separate dictionary holding the changes for each unsaved keybind
-				labels.Add(InputManager.Instance.GetBinding(action));
+				labels.Add(InputManager.Instance.GetBinding(action).ToString());
 			}
 			
 			return labels.GroupBy(x => x)
