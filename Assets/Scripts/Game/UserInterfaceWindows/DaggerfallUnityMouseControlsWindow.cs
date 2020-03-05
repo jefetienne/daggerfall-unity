@@ -38,7 +38,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         TextLabel titleLabel;
         Button escapeKeybindButton = new Button();
         Button consoleKeybindButton = new Button();
-        //Button screenshotKeybindButton = new Button();
+        Button screenshotKeybindButton = new Button();
         Button quickSaveKeybindButton = new Button();
         Button quickLoadKeybindButton = new Button();
 
@@ -97,7 +97,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             // keybind buttons
             SetupKeybindButton(escapeKeybindButton, InputManager.Actions.Escape, 0, 20);
             SetupKeybindButton(consoleKeybindButton, InputManager.Actions.ToggleConsole, 0, 40);
-            //SetupKeybindButton(screenshotKeybindButton, InputManager.Actions.Jump, 90, 20);
+            SetupKeybindButton(screenshotKeybindButton, InputManager.Actions.PrintScreen, 90, 20);
             SetupKeybindButton(quickSaveKeybindButton, InputManager.Actions.QuickSave, 90, 40);
             SetupKeybindButton(quickLoadKeybindButton, InputManager.Actions.QuickLoad, 180, 20);
 
@@ -178,7 +178,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         {
             SetupKeybindButton(escapeKeybindButton, InputManager.Actions.Escape);
             SetupKeybindButton(consoleKeybindButton, InputManager.Actions.ToggleConsole);
-            //SetupKeybindButton(screenshotKeybindButton, InputManager.Actions.Jump);
+            SetupKeybindButton(screenshotKeybindButton, InputManager.Actions.PrintScreen);
             SetupKeybindButton(quickSaveKeybindButton, InputManager.Actions.QuickSave);
             SetupKeybindButton(quickLoadKeybindButton, InputManager.Actions.QuickLoad);
         }
