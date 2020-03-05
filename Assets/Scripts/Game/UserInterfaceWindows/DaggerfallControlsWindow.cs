@@ -45,15 +45,15 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         List<Button> lookKeys = new List<Button>();
         List<Button> uiKeys = new List<Button>();
         List<List<Button>> allKeys = new List<List<Button>>();
-        List<string> allLabels = new List<string>();
-        List<string> dupeLabels = new List<string>();
 
         string[] actions = Enum.GetNames(typeof(InputManager.Actions));
         const string nativeTextureName = "CNFG00I0.IMG";
         const string mLookAltTextureName = "CNFG00I1.IMG";
         const string confirmDefaults = "Are you sure you want to set default controls?";
-        bool dupeHelper = false;
         bool waitingForInput = false;
+        bool doUpdateKeybinds = true;
+
+        public static Dictionary<InputManager.Actions, string> unsavedKeybindDict = new Dictionary<InputManager.Actions, string>();
 
         #endregion
 
@@ -130,6 +130,8 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
             #region Keybind Buttons
 
+            ResetUnsavedDictionary();
+
             SetupKeybindButtons(moveKeysOne, 2, 8, 57, 13, true);
             SetupKeybindButtons(moveKeysTwo, 8, 14, 164, 13, true);
             SetupKeybindButtons(modeKeys, 14, 20, 270, 13, true);
@@ -147,40 +149,46 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         #region Overrides
 
-        public override void OnPush()
-        {
-			Instance = this;
-		}
-
         public override void OnPop()
         {
             // Update keybinds only when exiting from a valid configuration
             SaveAllKeyBindValues();
             InputManager.Instance.SaveKeyBinds();
-			Instance = null;
+            ResetUnsavedDictionary();
         }
 
         public override void OnReturn()
-		{
-			UpdateKeybindButtons();
-		}
+        {
+            if(doUpdateKeybinds)
+                UpdateKeybindButtons();
+            doUpdateKeybinds = true;
+        }
 
         #endregion
 
         #region Private Methods
 
+        private void ResetUnsavedDictionary()
+        {
+            foreach (InputManager.Actions a in Enum.GetValues(typeof(InputManager.Actions)))
+                unsavedKeybindDict[a] = InputManager.Instance.GetBinding(a).ToString();
+        }
+
         private void SaveAllKeyBindValues()
-		{
-            SaveKeybindValues(moveKeysOne, 2, 8);
-            SaveKeybindValues(moveKeysTwo, 8, 14);
-            SaveKeybindValues(modeKeys, 14, 20);
-            SaveKeybindValues(magicKeys, 20, 24);
-            SaveKeybindValues(weaponKeys, 24, 27);
-            SaveKeybindValues(statusKeys, 27, 30);
-            SaveKeybindValues(activateKeys, 30, 32);
-            SaveKeybindValues(lookKeys, 32, 36);
-            SaveKeybindValues(uiKeys, 36, 40);
-		}
+        {
+            foreach(var action in unsavedKeybindDict.Keys)
+            {
+                KeyCode code = (KeyCode)Enum.Parse(typeof(KeyCode), unsavedKeybindDict[action]);
+
+                // Rebind only if new code is different
+                KeyCode curCode = InputManager.Instance.GetBinding(action);
+                if (curCode != code)
+                {
+                    InputManager.Instance.SetBinding(code, action);
+                    Debug.LogFormat("Bound Action {0} with Code {1}", action, code.ToString());
+                }
+            }
+        }
 
         private void SetupKeybindButtons(List<Button> buttonGroup, int startPoint, int endPoint, int leftOffset, int topOffset, bool firstSetup)
         {
@@ -209,118 +217,48 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                     }
                 }
 
-                buttonGroup[j].Label.Text = InputManager.Instance.GetBinding(key).ToString();
+                buttonGroup[j].Label.Text = unsavedKeybindDict[key].ToString();
                 buttonGroup[j].Label.TextColor = DaggerfallUI.DaggerfallDefaultTextColor;
             }
         }
 
-        private void SaveKeybindValues(List<Button> buttonGroup, int startPoint, int endPoint)
+        public static HashSet<String> GetDuplicates(IEnumerable<String> texts)
         {
-            for (int i = startPoint; i < endPoint; i++)
+            HashSet<String> recorded = new HashSet<String>();
+            HashSet<String> dupes = new HashSet<String>();
+            foreach (String str in texts)
             {
-                // Get action and code for this button
-                int j = i - startPoint;
-                InputManager.Actions action = (InputManager.Actions)Enum.Parse(typeof(InputManager.Actions), actions[i]);
-                KeyCode code = (KeyCode)Enum.Parse(typeof(KeyCode), buttonGroup[j].Label.Text);
-
-                // Rebind only if new code is different
-                KeyCode curCode = InputManager.Instance.GetBinding(action);
-                if (curCode != code)
-                {
-                    InputManager.Instance.SetBinding(code, action);
-                    Debug.LogFormat("Bound Action {0} with Code {1}", action, code.ToString());
-                }
+                if(!recorded.Contains(str))
+                    recorded.Add(str);
+                else
+                    dupes.Add(str);
             }
+            return dupes;
         }
 
-		public static DaggerfallControlsWindow Instance
-		{
-			get; private set;
-		}
-
-		private void CheckDuplicates()
-		{
-			CheckDuplicates(allKeys);
-		}
-
-		public void CheckDuplicates(List<Button> buttonGroup)
-		{
-			List<List<Button>> allTheKeys = allKeys.ToList();
-			allTheKeys.Add(buttonGroup);
-			CheckDuplicates(allTheKeys);
-		}
-		
-		private List<string> GetDuplicates()
-		{
-			List<String> labels = new List<String>();
-			foreach (String a in actions)
-			{
-                InputManager.Actions action = (InputManager.Actions)Enum.Parse(typeof(InputManager.Actions), a);
-				//don't do getbinding, have a separate dictionary holding the changes for each unsaved keybind
-				labels.Add(InputManager.Instance.GetBinding(action).ToString());
-			}
-			
-			return labels.GroupBy(x => x)
-                             .Where(g => g.Count() > 1)
-                             .Select(g => g.Key)
-                             .ToList();
-		}
-
-////////////////////////////////////////
-
-        private void CheckDuplicates(List<List<Button>> allTheKeys)
+        private void CheckDuplicates()
         {
-            foreach (List<Button> buttonGroup in allTheKeys)
-            {
-                foreach (Button keybindButton in buttonGroup)
-                {
-                    if (!dupeHelper)
-                    {
-                        allLabels.Add(keybindButton.Label.Text);
-                    }
-                    else
-                    {
-                        if (dupeLabels.Contains(keybindButton.Label.Text))
-                        {
-                            keybindButton.Label.TextColor = new Color(1, 0, 0);
-                        }
-                        else
-                        {
-                            keybindButton.Label.TextColor = DaggerfallUI.DaggerfallDefaultTextColor;
-                        }
-                    }
-                }
-            }
+            IEnumerable<String> keyList = unsavedKeybindDict.Select(kv => kv.Value); //totalButtons.Select(x => x.Label.Text).ToList();
 
-            if (!dupeHelper)
+            HashSet<String> dupes = GetDuplicates(keyList);
+
+            AllowCancel = dupes.Count == 0;
+
+            IEnumerable<Button> totalButtons = allKeys.SelectMany(l => l);
+            foreach (Button keybindButton in totalButtons)
             {
-                dupeLabels = allLabels.GroupBy(x => x)
-                             .Where(g => g.Count() > 1)
-                             .Select(g => g.Key)
-                             .ToList();
-                if (dupeLabels.Count() > 0)
-                {
-                    AllowCancel = false;
-                }
+                if (dupes.Contains(keybindButton.Label.Text))
+                    keybindButton.Label.TextColor = new Color(1, 0, 0);
                 else
-                {
-                    AllowCancel = true;
-                }
-                dupeHelper = true;
-                CheckDuplicates(allTheKeys);
-            }
-            else
-            {
-                allLabels.Clear();
-                dupeLabels.Clear();
-                dupeHelper = false;
+                    keybindButton.Label.TextColor = DaggerfallUI.DaggerfallDefaultTextColor;
             }
         }
 
         private void SetDefaults()
         {
             InputManager.Instance.ResetDefaults();
-			UpdateKeybindButtons();
+            ResetUnsavedDictionary();
+            UpdateKeybindButtons();
             AllowCancel = true;
         }
 
@@ -335,12 +273,15 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             SetupKeybindButtons(activateKeys, 30, 32, 269, 79, false);
             SetupKeybindButtons(lookKeys, 32, 36, 269, 102, false);
             SetupKeybindButtons(uiKeys, 36, 40, 269, 147, false);
+
+            CheckDuplicates();
         }
 
         private void ShowMultipleAssignmentsMessage()
-		{
-			ShowMultipleAssignmentsMessage(uiManager, this);
-		}
+        {
+            doUpdateKeybinds = false;
+            ShowMultipleAssignmentsMessage(uiManager, this);
+        }
 
         public static void ShowMultipleAssignmentsMessage(IUserInterfaceManager manager, IUserInterfaceWindow window)
         {
@@ -351,12 +292,12 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         }
 
         //a workaround solution to setting the 'waitingForInput' instance variable in a
-		//static IEnumerator method. IEnumerator methods can't accept out/ref parameters
-		private void SetWaitingForInput(bool b)
-		{
-			waitingForInput = b;
-			AllowCancel = !b;
-		}
+        //static IEnumerator method. IEnumerator methods can't accept out/ref parameters
+        private void SetWaitingForInput(bool b)
+        {
+            waitingForInput = b;
+            AllowCancel = !b;
+        }
 
         #endregion
 
@@ -369,7 +310,6 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         private void MouseButton_OnMouseClick(BaseScreenComponent sender, Vector2 position)
         {
-			SaveAllKeyBindValues();
             uiManager.PostMessage(DaggerfallUIMessages.dfuiOpenMouseControlsWindow);
         }
 
@@ -421,8 +361,6 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         {
             string currentLabel = button.Label.Text;
 
-            //InputManager.Actions buttonAction = (InputManager.Actions)Enum.Parse(typeof(InputManager.Actions), button.Name);
-
             button.Label.Text = "";
             yield return new WaitForSecondsRealtime(0.05f);
 
@@ -440,6 +378,10 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                     if (code.ToString() != "Escape")
                     {
                         button.Label.Text = code.ToString();
+
+                        var action = (InputManager.Actions)Enum.Parse(typeof(InputManager.Actions), button.Name);
+
+                        unsavedKeybindDict[action] = button.Label.Text;
                         checkDuplicates();
                     }
                     else

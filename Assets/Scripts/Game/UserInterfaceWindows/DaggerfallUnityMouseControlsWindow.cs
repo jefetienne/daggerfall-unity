@@ -11,6 +11,7 @@
 
 using UnityEngine;
 using System;
+using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using DaggerfallConnect.Arena2;
@@ -35,17 +36,15 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         Panel mainPanel;
         TextLabel titleLabel;
-		Button escapeKeybindButton = new Button();
-		Button consoleKeybindButton = new Button();
-		//Button screenshotKeybindButton = new Button();
-		Button quickSaveKeybindButton = new Button();
-		Button quickLoadKeybindButton = new Button();
+        Button escapeKeybindButton = new Button();
+        Button consoleKeybindButton = new Button();
+        //Button screenshotKeybindButton = new Button();
+        Button quickSaveKeybindButton = new Button();
+        Button quickLoadKeybindButton = new Button();
 
-		public List<Button> buttonGroup = new List<Button>();
-		
-		public static DaggerfallUnityMouseControlsWindow Instance { get; private set; }
+        public List<Button> buttonGroup = new List<Button>();
 
-		bool waitingForInput = false;
+        bool waitingForInput = false;
 
         #endregion
 
@@ -76,17 +75,15 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         protected override void Setup()
         {
-			Instance = this;
-			
             // Always dim background
             ParentPanel.BackgroundColor = ScreenDimColor;
 
-			keybindButtonBackgroundColor = new Color(0.2f, 0.2f, 0.2f, 1.0f);
+            keybindButtonBackgroundColor = new Color(0.2f, 0.2f, 0.2f, 1.0f);
 
             // Main panel
-			Color mainPanelBackgroundColor = new Color(0.0f, 0.0f, 0.0f, 1.0f);
-			Vector2 mainPanelSize = new Vector2(280, 170);
-			mainPanel = new Panel();
+            Color mainPanelBackgroundColor = new Color(0.0f, 0.0f, 0.0f, 1.0f);
+            Vector2 mainPanelSize = new Vector2(280, 170);
+            mainPanel = new Panel();
             mainPanel.HorizontalAlignment = HorizontalAlignment.Center;
             mainPanel.VerticalAlignment = VerticalAlignment.Middle;
             mainPanel.Size = mainPanelSize;
@@ -95,19 +92,19 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             NativePanel.Components.Add(mainPanel);
 
             // Title label
-			titleLabel = new TextLabel();
+            titleLabel = new TextLabel();
             titleLabel.ShadowPosition = Vector2.zero;
             titleLabel.Position = new Vector2(4, 4);
-			titleLabel.Text = "Configure Advanced Controls";
-			titleLabel.HorizontalAlignment = HorizontalAlignment.Center;
+            titleLabel.Text = "Configure Advanced Controls";
+            titleLabel.HorizontalAlignment = HorizontalAlignment.Center;
             mainPanel.Components.Add(titleLabel);
-			
+
             // keybind buttons
-			SetupKeybindButton(escapeKeybindButton, InputManager.Actions.Escape, 0, 20);
-			SetupKeybindButton(consoleKeybindButton, InputManager.Actions.ToggleConsole, 0, 40);
-			//SetupKeybindButton(screenshotKeybindButton, InputManager.Actions.Jump, 90, 20);
-			SetupKeybindButton(quickSaveKeybindButton, InputManager.Actions.QuickSave, 90, 40);
-			SetupKeybindButton(quickLoadKeybindButton, InputManager.Actions.QuickLoad, 180, 20);
+            SetupKeybindButton(escapeKeybindButton, InputManager.Actions.Escape, 0, 20);
+            SetupKeybindButton(consoleKeybindButton, InputManager.Actions.ToggleConsole, 0, 40);
+            //SetupKeybindButton(screenshotKeybindButton, InputManager.Actions.Jump, 90, 20);
+            SetupKeybindButton(quickSaveKeybindButton, InputManager.Actions.QuickSave, 90, 40);
+            SetupKeybindButton(quickLoadKeybindButton, InputManager.Actions.QuickLoad, 180, 20);
 
             // Continue
             //Button continueButton = DaggerfallUI.AddButton(new Rect(20, 109, 68, 18), mainPanel);
@@ -118,91 +115,80 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         #region Overrides
 
-		public override void OnPush()
-		{
-			OnReturn();
-		}
-
-		public override void OnPop()
-		{
-			SaveKeybindValue(escapeKeybindButton, InputManager.Actions.Escape);
-			SaveKeybindValue(consoleKeybindButton, InputManager.Actions.ToggleConsole);
-			//SaveKeybindValue(screenshotKeybindButton, InputManager.Actions.Jump);
-			SaveKeybindValue(quickSaveKeybindButton, InputManager.Actions.QuickSave);
-			SaveKeybindValue(quickLoadKeybindButton, InputManager.Actions.QuickLoad);
-            InputManager.Instance.SaveKeyBinds();
-		}
+        public override void OnPush()
+        {
+            OnReturn();
+        }
 
         public override void OnReturn()
-		{
-			UpdateKeybindButtons();
-			CheckDuplicates();
-		}
+        {
+            UpdateKeybindButtons();
+            CheckDuplicates();
+        }
 
         #endregion
 
         #region Private methods
 
         //for "reset defaults" overload
-		//**might delete this, since reset defaults is in the main controls window
+        //**might delete this, since reset defaults is in the main controls window
         private void SetupKeybindButton(Button button, InputManager.Actions action)
         {
-			button.Label.Text = InputManager.Instance.GetBinding(action).ToString();
-			button.Label.TextColor = DaggerfallUI.DaggerfallDefaultTextColor;
+            button.Label.Text = DaggerfallControlsWindow.unsavedKeybindDict[action];//InputManager.Instance.GetBinding(action).ToString();
+            button.Label.TextColor = DaggerfallUI.DaggerfallDefaultTextColor;
         }
 
         //for initialization
         private void SetupKeybindButton(Button button, InputManager.Actions action, int x, int y)
         {
-			Panel panel = new Panel();
-			panel.Position = new Vector2(x, y);
-			panel.Size = new Vector2(85, 15);
+            Panel panel = new Panel();
+            panel.Position = new Vector2(x, y);
+            panel.Size = new Vector2(85, 15);
 
-			Panel labelPanel = new Panel();
-			labelPanel.Size = new Vector2(40, 10);
-			labelPanel.Position = new Vector2(0, 0);
-			labelPanel.HorizontalAlignment = HorizontalAlignment.Left;
-			labelPanel.VerticalAlignment = VerticalAlignment.Middle;
+            Panel labelPanel = new Panel();
+            labelPanel.Size = new Vector2(40, 10);
+            labelPanel.Position = new Vector2(0, 0);
+            labelPanel.HorizontalAlignment = HorizontalAlignment.Left;
+            labelPanel.VerticalAlignment = VerticalAlignment.Middle;
 
-			TextLabel label = new TextLabel();
+            TextLabel label = new TextLabel();
             label.Position = new Vector2(0, 0);
             label.HorizontalAlignment = HorizontalAlignment.Right;
             label.VerticalAlignment = VerticalAlignment.Middle;
             label.ShadowPosition = Vector2.zero;
             label.Text = action.ToString();
-			label.TextColor = DaggerfallUI.DaggerfallDefaultTextColor;
+            label.TextColor = DaggerfallUI.DaggerfallDefaultTextColor;
 
-			button.Name = action.ToString();
-			button.Label.ShadowPosition = Vector2.zero;
-			button.Size = new Vector2(43, 10);
-			button.Position = new Vector2(43, 0);
-			button.HorizontalAlignment = HorizontalAlignment.Right;
-			button.VerticalAlignment = VerticalAlignment.Middle;
+            button.Name = action.ToString();
+            button.Label.ShadowPosition = Vector2.zero;
+            button.Size = new Vector2(43, 10);
+            button.Position = new Vector2(43, 0);
+            button.HorizontalAlignment = HorizontalAlignment.Right;
+            button.VerticalAlignment = VerticalAlignment.Middle;
 
-			
             SetBackground(button, keybindButtonBackgroundColor, "advancedKeybindBackgroundColor");
-			button.OnMouseClick += KeybindButton_OnMouseClick;
+            button.OnMouseClick += KeybindButton_OnMouseClick;
 
-			buttonGroup.Add(button);
+            buttonGroup.Add(button);
 
-			labelPanel.Components.Add(label);
-			panel.Components.Add(labelPanel);
-			panel.Components.Add(button);
-			mainPanel.Components.Add(panel);
+            labelPanel.Components.Add(label);
+            panel.Components.Add(labelPanel);
+            panel.Components.Add(button);
+            mainPanel.Components.Add(panel);
 
-			SetupKeybindButton(button, action);
+            SetupKeybindButton(button, action);
         }
 
         private void UpdateKeybindButtons()
         {
-			SetupKeybindButton(escapeKeybindButton, InputManager.Actions.Escape);
-			SetupKeybindButton(consoleKeybindButton, InputManager.Actions.ToggleConsole);
-			//SetupKeybindButton(screenshotKeybindButton, InputManager.Actions.Jump);
-			SetupKeybindButton(quickSaveKeybindButton, InputManager.Actions.QuickSave);
-			SetupKeybindButton(quickLoadKeybindButton, InputManager.Actions.QuickLoad);
+            SetupKeybindButton(escapeKeybindButton, InputManager.Actions.Escape);
+            SetupKeybindButton(consoleKeybindButton, InputManager.Actions.ToggleConsole);
+            //SetupKeybindButton(screenshotKeybindButton, InputManager.Actions.Jump);
+            SetupKeybindButton(quickSaveKeybindButton, InputManager.Actions.QuickSave);
+            SetupKeybindButton(quickLoadKeybindButton, InputManager.Actions.QuickLoad);
         }
 
-		//from DaggerfallUnitySaveGameWindow
+        //from DaggerfallUnitySaveGameWindow
         void SetBackground(BaseScreenComponent panel, Color color, string textureName)
         {
             Texture2D tex;
@@ -217,31 +203,26 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         private void CheckDuplicates()
         {
-			Debug.Log("checking dups");
-			DaggerfallControlsWindow.Instance.CheckDuplicates(buttonGroup);
-        }
+            IEnumerable<String> keyList = DaggerfallControlsWindow.unsavedKeybindDict.Select(kv => kv.Value); //buttonGroup.Select(b => b.Label.Text).ToList();
 
-        private void SaveKeybindValue(Button button, InputManager.Actions action)
-        {
-			// Get action and code for this button
-			KeyCode code = (KeyCode)Enum.Parse(typeof(KeyCode), button.Label.Text);
+            var dupes = DaggerfallControlsWindow.GetDuplicates(keyList);
 
-			// Rebind only if new code is different
-			KeyCode curCode = InputManager.Instance.GetBinding(action);
-			if (curCode != code)
-			{
-				InputManager.Instance.SetBinding(code, action);
-				Debug.LogFormat("Bound Action {0} with Code {1}", action, code.ToString());
-			}
+            foreach (Button keybindButton in buttonGroup)
+            {
+                if (dupes.Contains(keybindButton.Label.Text))
+                    keybindButton.Label.TextColor = new Color(1, 0, 0);
+                else
+                    keybindButton.Label.TextColor = DaggerfallUI.DaggerfallDefaultTextColor;
+            }
         }
 
         //a workaround solution to setting the 'waitingForInput' instance variable in a
-		//static IEnumerator method. IEnumerator methods can't accept out/ref parameters
-		private void SetWaitingForInput(bool b)
-		{
-			waitingForInput = b;
-			AllowCancel = !b;
-		}
+        //static IEnumerator method. IEnumerator methods can't accept out/ref parameters
+        private void SetWaitingForInput(bool b)
+        {
+            waitingForInput = b;
+            AllowCancel = !b;
+        }
 
         #endregion
 
