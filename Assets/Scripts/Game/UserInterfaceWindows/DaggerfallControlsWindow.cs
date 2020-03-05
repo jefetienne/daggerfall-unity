@@ -314,6 +314,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         private void MouseButton_OnMouseClick(BaseScreenComponent sender, Vector2 position)
         {
+            DaggerfallUI.Instance.PlayOneShot(SoundClips.ButtonClick);
             uiManager.PostMessage(DaggerfallUIMessages.dfuiOpenMouseControlsWindow);
         }
 

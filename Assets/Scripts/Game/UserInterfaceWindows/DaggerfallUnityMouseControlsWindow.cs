@@ -32,7 +32,9 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         #region Fields
 
-        Color keybindButtonBackgroundColor;
+        Color mainPanelBackgroundColor = new Color(0.0f, 0.0f, 0.0f, 1.0f);
+        Color keybindButtonBackgroundColor = new Color(0.2f, 0.2f, 0.2f, 1.0f);
+        Color continueButtonBackgroundColor = new Color(0.5f, 0.0f, 0.0f, 1.0f);
 
         Panel mainPanel;
         TextLabel titleLabel;
@@ -73,10 +75,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             // Always dim background
             ParentPanel.BackgroundColor = ScreenDimColor;
 
-            keybindButtonBackgroundColor = new Color(0.2f, 0.2f, 0.2f, 1.0f);
-
             // Main panel
-            Color mainPanelBackgroundColor = new Color(0.0f, 0.0f, 0.0f, 1.0f);
             Vector2 mainPanelSize = new Vector2(318, 170);
             mainPanel = new Panel();
             mainPanel.HorizontalAlignment = HorizontalAlignment.Center;
@@ -94,6 +93,15 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             titleLabel.HorizontalAlignment = HorizontalAlignment.Center;
             mainPanel.Components.Add(titleLabel);
 
+            // Continue button
+            Button continueButton = new Button();
+            continueButton.Label.Text = "Continue";
+            continueButton.Size = new Vector2(68, 10);
+            continueButton.HorizontalAlignment = HorizontalAlignment.Right;
+            continueButton.VerticalAlignment = VerticalAlignment.Bottom;
+            SetBackground(continueButton, continueButtonBackgroundColor, "continueButtonBackgroundColor");
+            mainPanel.Components.Add(continueButton);
+
             // keybind buttons
             SetupKeybindButton(escapeKeybindButton, InputManager.Actions.Escape, 20, 20);
             SetupKeybindButton(consoleKeybindButton, InputManager.Actions.ToggleConsole, 20, 40);
@@ -101,9 +109,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             SetupKeybindButton(quickSaveKeybindButton, InputManager.Actions.QuickSave, 115, 40);
             SetupKeybindButton(quickLoadKeybindButton, InputManager.Actions.QuickLoad, 210, 20);
 
-            // Continue
-            //Button continueButton = DaggerfallUI.AddButton(new Rect(20, 109, 68, 18), mainPanel);
-            //continueButton.OnMouseClick += ContinueButton_OnMouseClick;
+            continueButton.OnMouseClick += ContinueButton_OnMouseClick;
         }
 
         #endregion
@@ -225,6 +231,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         private void ContinueButton_OnMouseClick(BaseScreenComponent sender, Vector2 position)
         {
+            DaggerfallUI.Instance.PlayOneShot(SoundClips.ButtonClick);
             CancelWindow();
         }
 
