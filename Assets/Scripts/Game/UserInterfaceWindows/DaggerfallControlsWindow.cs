@@ -246,7 +246,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         private void CheckDuplicates()
         {
-            IEnumerable<String> keyList = unsavedKeybindDict.Select(kv => kv.Value); //totalButtons.Select(x => x.Label.Text).ToList();
+            IEnumerable<String> keyList = unsavedKeybindDict.Select(kv => kv.Value);
 
             HashSet<String> dupes = GetDuplicates(keyList);
 
