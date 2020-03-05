@@ -53,6 +53,10 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         bool waitingForInput = false;
         bool doUpdateKeybinds = true;
 
+        #endregion
+
+        #region Public Static Fields
+
         public static Dictionary<InputManager.Actions, string> unsavedKeybindDict = new Dictionary<InputManager.Actions, string>();
 
         #endregion
@@ -166,6 +170,24 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         #endregion
 
+        #region Public Static Methods
+
+        public static HashSet<String> GetDuplicates(IEnumerable<String> texts)
+        {
+            HashSet<String> recorded = new HashSet<String>();
+            HashSet<String> dupes = new HashSet<String>();
+            foreach (String str in texts)
+            {
+                if(!recorded.Contains(str))
+                    recorded.Add(str);
+                else
+                    dupes.Add(str);
+            }
+            return dupes;
+        }
+
+        #endregion
+
         #region Private Methods
 
         private void ResetUnsavedDictionary()
@@ -222,20 +244,6 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             }
         }
 
-        public static HashSet<String> GetDuplicates(IEnumerable<String> texts)
-        {
-            HashSet<String> recorded = new HashSet<String>();
-            HashSet<String> dupes = new HashSet<String>();
-            foreach (String str in texts)
-            {
-                if(!recorded.Contains(str))
-                    recorded.Add(str);
-                else
-                    dupes.Add(str);
-            }
-            return dupes;
-        }
-
         private void CheckDuplicates()
         {
             IEnumerable<String> keyList = unsavedKeybindDict.Select(kv => kv.Value); //totalButtons.Select(x => x.Label.Text).ToList();
@@ -280,11 +288,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         private void ShowMultipleAssignmentsMessage()
         {
             doUpdateKeybinds = false;
-            ShowMultipleAssignmentsMessage(uiManager, this);
-        }
 
-        public static void ShowMultipleAssignmentsMessage(IUserInterfaceManager manager, IUserInterfaceWindow window)
-        {
             DaggerfallMessageBox multipleAssignmentsBox = new DaggerfallMessageBox(manager, window);
             multipleAssignmentsBox.SetText(HardStrings.multipleAssignments);
             multipleAssignmentsBox.ClickAnywhereToClose = true;
@@ -391,7 +395,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 }
             }
         }
-        
+
         #endregion
     }
 }

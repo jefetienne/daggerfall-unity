@@ -42,7 +42,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         Button quickSaveKeybindButton = new Button();
         Button quickLoadKeybindButton = new Button();
 
-        public List<Button> buttonGroup = new List<Button>();
+        List<Button> buttonGroup = new List<Button>();
 
         bool waitingForInput = false;
 
@@ -62,11 +62,6 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         public override void Update()
         {
             base.Update();
-
-            if (!AllowCancel && !waitingForInput && Input.GetKeyDown(KeyCode.Escape))
-            {
-                DaggerfallControlsWindow.ShowMultipleAssignmentsMessage(uiManager, this);
-            }
         }
 
         #endregion
@@ -134,7 +129,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         //**might delete this, since reset defaults is in the main controls window
         private void SetupKeybindButton(Button button, InputManager.Actions action)
         {
-            button.Label.Text = DaggerfallControlsWindow.unsavedKeybindDict[action];//InputManager.Instance.GetBinding(action).ToString();
+            button.Label.Text = DaggerfallControlsWindow.unsavedKeybindDict[action];
             button.Label.TextColor = DaggerfallUI.DaggerfallDefaultTextColor;
         }
 
@@ -203,7 +198,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         private void CheckDuplicates()
         {
-            IEnumerable<String> keyList = DaggerfallControlsWindow.unsavedKeybindDict.Select(kv => kv.Value); //buttonGroup.Select(b => b.Label.Text).ToList();
+            IEnumerable<String> keyList = DaggerfallControlsWindow.unsavedKeybindDict.Select(kv => kv.Value);
 
             var dupes = DaggerfallControlsWindow.GetDuplicates(keyList);
 
