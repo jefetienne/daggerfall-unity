@@ -77,7 +77,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
             // Main panel
             Color mainPanelBackgroundColor = new Color(0.0f, 0.0f, 0.0f, 1.0f);
-            Vector2 mainPanelSize = new Vector2(280, 170);
+            Vector2 mainPanelSize = new Vector2(318, 170);
             mainPanel = new Panel();
             mainPanel.HorizontalAlignment = HorizontalAlignment.Center;
             mainPanel.VerticalAlignment = VerticalAlignment.Middle;
@@ -95,11 +95,11 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             mainPanel.Components.Add(titleLabel);
 
             // keybind buttons
-            SetupKeybindButton(escapeKeybindButton, InputManager.Actions.Escape, 0, 20);
-            SetupKeybindButton(consoleKeybindButton, InputManager.Actions.ToggleConsole, 0, 40);
-            SetupKeybindButton(screenshotKeybindButton, InputManager.Actions.PrintScreen, 90, 20);
-            SetupKeybindButton(quickSaveKeybindButton, InputManager.Actions.QuickSave, 90, 40);
-            SetupKeybindButton(quickLoadKeybindButton, InputManager.Actions.QuickLoad, 180, 20);
+            SetupKeybindButton(escapeKeybindButton, InputManager.Actions.Escape, 20, 20);
+            SetupKeybindButton(consoleKeybindButton, InputManager.Actions.ToggleConsole, 20, 40);
+            SetupKeybindButton(screenshotKeybindButton, InputManager.Actions.PrintScreen, 115, 20);
+            SetupKeybindButton(quickSaveKeybindButton, InputManager.Actions.QuickSave, 115, 40);
+            SetupKeybindButton(quickLoadKeybindButton, InputManager.Actions.QuickLoad, 210, 20);
 
             // Continue
             //Button continueButton = DaggerfallUI.AddButton(new Rect(20, 109, 68, 18), mainPanel);
