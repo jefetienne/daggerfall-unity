@@ -163,7 +163,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         public override void OnReturn()
         {
-            if(doUpdateKeybinds)
+            if (doUpdateKeybinds)
                 UpdateKeybindButtons();
             doUpdateKeybinds = true;
         }
