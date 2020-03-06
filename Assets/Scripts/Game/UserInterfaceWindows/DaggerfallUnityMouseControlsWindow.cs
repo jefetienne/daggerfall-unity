@@ -95,8 +95,8 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
             // Continue button
             Button continueButton = new Button();
-            continueButton.Label.Text = "Continue";
-            continueButton.Size = new Vector2(68, 10);
+            continueButton.Label.Text = "CONTINUE";
+            continueButton.Size = new Vector2(80, 10);
             continueButton.HorizontalAlignment = HorizontalAlignment.Right;
             continueButton.VerticalAlignment = VerticalAlignment.Bottom;
             SetBackground(continueButton, continueButtonBackgroundColor, "continueButtonBackgroundColor");
