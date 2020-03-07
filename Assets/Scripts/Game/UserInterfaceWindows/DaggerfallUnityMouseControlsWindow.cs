@@ -104,10 +104,10 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
             // keybind buttons
             SetupKeybindButton(escapeKeybindButton, InputManager.Actions.Escape, 20, 20);
-            SetupKeybindButton(consoleKeybindButton, InputManager.Actions.ToggleConsole, 20, 40);
-            SetupKeybindButton(screenshotKeybindButton, InputManager.Actions.PrintScreen, 115, 20);
-            SetupKeybindButton(quickSaveKeybindButton, InputManager.Actions.QuickSave, 115, 40);
-            SetupKeybindButton(quickLoadKeybindButton, InputManager.Actions.QuickLoad, 210, 20);
+            SetupKeybindButton(consoleKeybindButton, InputManager.Actions.ToggleConsole, 115, 20);
+            SetupKeybindButton(screenshotKeybindButton, InputManager.Actions.PrintScreen, 210, 20);
+            SetupKeybindButton(quickSaveKeybindButton, InputManager.Actions.QuickSave, 20, 40);
+            SetupKeybindButton(quickLoadKeybindButton, InputManager.Actions.QuickLoad, 115, 40);
 
             continueButton.OnMouseClick += ContinueButton_OnMouseClick;
         }
@@ -157,7 +157,13 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             label.HorizontalAlignment = HorizontalAlignment.Right;
             label.VerticalAlignment = VerticalAlignment.Middle;
             label.ShadowPosition = Vector2.zero;
-            label.Text = action.ToString();
+
+            //"ToggleConsole" is too long as a word when looking in non-SDF font view
+            //"Screenshot" is a better word and is one letter less than "PrintScreen"
+            label.Text = action == InputManager.Actions.ToggleConsole ? "Console"
+                                   : action == InputManager.Actions.PrintScreen ? "Screenshot"
+                                   : action.ToString();
+
             label.TextColor = DaggerfallUI.DaggerfallDefaultTextColor;
 
             button.Name = action.ToString();
