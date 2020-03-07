@@ -237,16 +237,22 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         private void ContinueButton_OnMouseClick(BaseScreenComponent sender, Vector2 position)
         {
+            if (waitingForInput)
+                return;
+
             DaggerfallUI.Instance.PlayOneShot(SoundClips.ButtonClick);
             CancelWindow();
         }
 
         private void KeybindButton_OnMouseClick(BaseScreenComponent sender, Vector2 position)
         {
+            if (waitingForInput)
+                return;
+
             DaggerfallUI.Instance.PlayOneShot(SoundClips.ButtonClick);
             Button thisKeybindButton = (Button)sender;
-            if (!waitingForInput)
-                InputManager.Instance.StartCoroutine(WaitForKeyPress(thisKeybindButton));
+
+            InputManager.Instance.StartCoroutine(WaitForKeyPress(thisKeybindButton));
         }
 
         IEnumerator WaitForKeyPress(Button button)

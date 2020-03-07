@@ -309,17 +309,26 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         private void JoystickButton_OnMouseClick(BaseScreenComponent sender, Vector2 position)
         {
+            if (waitingForInput)
+                return;
+
             // uiManager.PostMessage(DaggerfallUIMessages.dfuiOpenJoystickControlsWindow);
         }
 
         private void MouseButton_OnMouseClick(BaseScreenComponent sender, Vector2 position)
         {
+            if (waitingForInput)
+                return;
+
             DaggerfallUI.Instance.PlayOneShot(SoundClips.ButtonClick);
             uiManager.PostMessage(DaggerfallUIMessages.dfuiOpenMouseControlsWindow);
         }
 
         private void DefaultButton_OnMouseClick(BaseScreenComponent sender, Vector2 position)
         {
+            if (waitingForInput)
+                return;
+
             DaggerfallUI.Instance.PlayOneShot(SoundClips.ButtonClick);
             DaggerfallMessageBox confirmDefaultsBox = new DaggerfallMessageBox(uiManager, DaggerfallMessageBox.CommonMessageBoxButtons.YesNo, confirmDefaults, this);
             confirmDefaultsBox.OnButtonClick += ConfirmDefaultsBox_OnButtonClick;
@@ -338,6 +347,9 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         private void ContinueButton_OnMouseClick(BaseScreenComponent sender, Vector2 position)
         {
+            if (waitingForInput)
+                return;
+
             DaggerfallUI.Instance.PlayOneShot(SoundClips.ButtonClick);
 
             if (!AllowCancel)
@@ -356,10 +368,13 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         private void KeybindButton_OnMouseClick(BaseScreenComponent sender, Vector2 position)
         {
+            if (waitingForInput)
+                return;
+
             DaggerfallUI.Instance.PlayOneShot(SoundClips.ButtonClick);
             Button thisKeybindButton = (Button)sender;
-            if (!waitingForInput)
-                InputManager.Instance.StartCoroutine(WaitForKeyPress(thisKeybindButton, CheckDuplicates, SetWaitingForInput));
+
+            InputManager.Instance.StartCoroutine(WaitForKeyPress(thisKeybindButton, CheckDuplicates, SetWaitingForInput));
         }
 
         public static IEnumerator WaitForKeyPress(Button button, System.Action checkDuplicates, System.Action<bool> setWaitingForInput)
