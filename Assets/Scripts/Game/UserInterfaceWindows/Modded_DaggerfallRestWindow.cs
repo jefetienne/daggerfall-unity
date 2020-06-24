@@ -23,7 +23,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
     public class Modded_DaggerfallRestWindow : DaggerfallRestWindow
     {
 
-		private bool rested = false;
+		public static bool SuccessfulRest { get; set; }
 
         public Modded_DaggerfallRestWindow(IUserInterfaceManager uiManager, bool ignoreAllocatedBed = false)
             : base(uiManager, ignoreAllocatedBed)
@@ -34,8 +34,8 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 		{
 			base.Update();
 
-			if (!rested && (currentRestMode == RestModes.FullRest || currentRestMode == RestModes.TimedRest)) {
-				rested = true;
+			if (!SuccessfulRest && (currentRestMode == RestModes.FullRest || currentRestMode == RestModes.TimedRest)) {
+				SuccessfulRest = true;
 				Debug.Log("**********Resting!");
 			}
 		}
@@ -44,9 +44,11 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         {
             base.OnPop();
 
-			if (rested) {
+			if (SuccessfulRest) {
 				if (!enemyBrokeRest) {
 					Debug.Log("************Saving....");
+					SuccessfulRest = false;
+
 					GameManager.Instance.SaveLoadManager.EnumerateSaves();
 					GameManager.Instance.SaveLoadManager.Save(GameManager.Instance.PlayerEntity.Name, "RestSave");
 				} else {

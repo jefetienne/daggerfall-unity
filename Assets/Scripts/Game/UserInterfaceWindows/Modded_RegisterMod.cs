@@ -10,14 +10,10 @@ using DaggerfallWorkshop.Utility;
 using DaggerfallWorkshop.Game;
 using DaggerfallWorkshop.Game.Formulas;
 using DaggerfallWorkshop.Game.Utility.ModSupport;
-using DaggerfallWorkshop.Game.Entity;
-using DaggerfallWorkshop.Game.Guilds;
-using DaggerfallWorkshop.Game.Items;
 using DaggerfallWorkshop.Game.Utility;
-using DaggerfallWorkshop.Game.MagicAndEffects;
-using DaggerfallWorkshop.Game.MagicAndEffects.MagicEffects;
 using DaggerfallWorkshop.Game.UserInterfaceWindows;
 using DaggerfallWorkshop.Game.UserInterface;
+using DaggerfallWorkshop.Game.Serialization;
 
 public class Modded_RegisterMod : MonoBehaviour
 {
@@ -41,5 +37,6 @@ public class Modded_RegisterMod : MonoBehaviour
         mod = initParams.Mod;
         var go = new GameObject(mod.Title);
         go.AddComponent<Modded_RegisterMod>();
+        SaveLoadManager.Instance.RegisterPreventSaveCondition(() => !Modded_DaggerfallRestWindow.SuccessfulRest );
     }
 }
