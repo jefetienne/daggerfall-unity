@@ -24,6 +24,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
     {
 
 		public static bool SuccessfulRest { get; set; }
+		private bool skipSave;
 
         public Modded_DaggerfallRestWindow(IUserInterfaceManager uiManager, bool ignoreAllocatedBed = false)
             : base(uiManager, ignoreAllocatedBed)
@@ -34,9 +35,8 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 		{
 			base.Update();
 
-			if (!SuccessfulRest && (currentRestMode == RestModes.FullRest || currentRestMode == RestModes.TimedRest)) {
-				SuccessfulRest = true;
-				Debug.Log("**********Resting!");
+			if (!endedRest && currentRestMode == RestModes.Loiter) {
+				skipSave = true;
 			}
 		}
 
@@ -44,13 +44,16 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         {
             base.OnPop();
 
-			if (SuccessfulRest) {
+			if (endedRest && !skipSave) {
 				if (!enemyBrokeRest) {
 					Debug.Log("************Saving....");
-					SuccessfulRest = false;
+
+					SuccessfulRest = true;
 
 					GameManager.Instance.SaveLoadManager.EnumerateSaves();
 					GameManager.Instance.SaveLoadManager.Save(GameManager.Instance.PlayerEntity.Name, "RestSave");
+
+					SuccessfulRest = false;
 				} else {
 					DaggerfallUI.AddHUDText("Enemies nearby, failed to save!");
 				}
