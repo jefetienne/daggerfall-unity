@@ -18,6 +18,7 @@ using DaggerfallWorkshop.Game.Serialization;
 public class Modded_RegisterMod : MonoBehaviour
 {
     static Mod mod;
+    public static bool UseSaveWindow { get; set; }
 
     public void Awake()
     {
@@ -35,6 +36,10 @@ public class Modded_RegisterMod : MonoBehaviour
     public static void Init(InitParams initParams)
     {
         mod = initParams.Mod;
+        //ModSettings settings = mod.GetSettings();
+        
+        //UseSaveWindow = settings.GetValue<bool>("GeneralSettings", "UseSaveWindow");
+
         var go = new GameObject(mod.Title);
         go.AddComponent<Modded_RegisterMod>();
         SaveLoadManager.Instance.RegisterPreventSaveCondition(() => !Modded_DaggerfallRestWindow.SuccessfulRest );
