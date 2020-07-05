@@ -14,6 +14,7 @@ using DaggerfallWorkshop.Game.Utility;
 using DaggerfallWorkshop.Game.UserInterfaceWindows;
 using DaggerfallWorkshop.Game.UserInterface;
 using DaggerfallWorkshop.Game.Serialization;
+using DaggerfallWorkshop.Game.Utility.ModSupport.ModSettings;
 
 public class Modded_RegisterMod : MonoBehaviour
 {
@@ -36,9 +37,9 @@ public class Modded_RegisterMod : MonoBehaviour
     public static void Init(InitParams initParams)
     {
         mod = initParams.Mod;
-        //ModSettings settings = mod.GetSettings();
+        ModSettings settings = mod.GetSettings();
         
-        //UseSaveWindow = settings.GetValue<bool>("GeneralSettings", "UseSaveWindow");
+        UseSaveWindow = settings.GetValue<bool>("GeneralSettings", "UseSaveWindow");
 
         var go = new GameObject(mod.Title);
         go.AddComponent<Modded_RegisterMod>();
