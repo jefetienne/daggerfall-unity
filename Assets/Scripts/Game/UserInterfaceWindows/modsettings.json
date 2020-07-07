@@ -1,0 +1,29 @@
+{
+    "Version": "1.0",
+    "Sections": [
+        {
+            "Name": "GeneralSettings",
+            "Description": null,
+            "IsAdvanced": false,
+            "Keys": [
+                {
+                    "Value": false,
+                    "Name": "UseSaveWindow",
+                    "Description": "Use the save window instead of an autosave when rested",
+                    "$version": "v1",
+                    "$type": "DaggerfallWorkshop.Game.Utility.ModSupport.ModSettings.ToggleKey"
+                },
+                {
+                    "Min": 1,
+                    "Max": 24,
+                    "Value": 1,
+                    "Name": "MinRestTime",
+                    "Description": "Minimum resting time required to save",
+                    "$version": "v1",
+                    "$type": "DaggerfallWorkshop.Game.Utility.ModSupport.ModSettings.SliderIntKey"
+                }
+            ],
+            "$version": "v1"
+        }
+    ]
+}
