@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -24,6 +24,7 @@ public class Modded_RegisterMod : MonoBehaviour
 
     static Mod mod;
     public static bool UseSaveWindow { get; private set; }
+    public static bool DisableSavePrompt { get; private set; }
     public static int MinRestTime { get; private set; }
     public static bool SuccessfulRest { get; private set; }
 
@@ -49,6 +50,7 @@ public class Modded_RegisterMod : MonoBehaviour
         ModSettings settings = mod.GetSettings();
         
         UseSaveWindow = settings.GetValue<bool>("GeneralSettings", "UseSaveWindow");
+        DisableSavePrompt = settings.GetValue<bool>("GeneralSettings", "DisableSavePrompt");
         
         MinRestTime = settings.GetValue<int>("GeneralSettings", "MinRestTime");
         if (MinRestTime < 1)
@@ -66,45 +68,61 @@ public class Modded_RegisterMod : MonoBehaviour
 
     public static IEnumerator PushAskBeforeSavingBox() {
         yield return null;
-        
-        DaggerfallMessageBox modBox = new DaggerfallMessageBox(DaggerfallUI.UIManager, DaggerfallUI.UIManager.TopWindow);
 
-        modBox.EnableVerticalScrolling(80);
-
-        bool saveFound = GameManager.Instance.SaveLoadManager.FindSaveFolderByNames(GameManager.Instance.PlayerEntity.Name, restSaveName) != -1;
-
-        if (!Modded_RegisterMod.UseSaveWindow && saveFound)
-            modBox.SetText(new string[] {
-                "Would you like to save your game?",
-                String.Empty,
-                "Note: This will overwrite your last '" + restSaveName + "'." });
-        else
-            modBox.SetText("Would you like to save your game?");
-
-        modBox.AddButton(DaggerfallMessageBox.MessageBoxButtons.Yes);
-        modBox.AddButton(DaggerfallMessageBox.MessageBoxButtons.No, true);
-        modBox.PauseWhileOpen = true;
-
-        modBox.OnButtonClick += ((s, messageBoxButton) =>
+        if (DisableSavePrompt)
         {
-            s.CloseWindow();
-            if (messageBoxButton == DaggerfallMessageBox.MessageBoxButtons.Yes)
-            {
-                if (Modded_RegisterMod.UseSaveWindow)
-                    DaggerfallUI.UIManager.PushWindow(UIWindowFactory.GetInstanceWithArgs(UIWindowType.UnitySaveGame,
-                        new object[] { DaggerfallUI.UIManager, DaggerfallUnitySaveGameWindow.Modes.SaveGame, DaggerfallUI.UIManager.TopWindow, false }));
-                else
-                {
-                    GameManager.Instance.SaveLoadManager.EnumerateSaves();
-				    GameManager.Instance.SaveLoadManager.Save(GameManager.Instance.PlayerEntity.Name, restSaveName);
-                }
-            }
+            SaveGame();
 
             //is set false even before the user saves in the save window
             //so far 0.10.24 it isn't a problem because the save button does not check for save prevention once the window is open
-			SuccessfulRest = false;
-        });
+            SuccessfulRest = false;
+        }
+        else
+        {
+            DaggerfallMessageBox modBox = new DaggerfallMessageBox(DaggerfallUI.UIManager, DaggerfallUI.UIManager.TopWindow);
 
-        modBox.Show();
+            modBox.EnableVerticalScrolling(80);
+
+            bool saveFound = GameManager.Instance.SaveLoadManager.FindSaveFolderByNames(GameManager.Instance.PlayerEntity.Name, restSaveName) != -1;
+
+            if (!Modded_RegisterMod.UseSaveWindow && saveFound)
+                modBox.SetText(new string[] {
+                "Would you like to save your game?",
+                String.Empty,
+                "Note: This will overwrite your last '" + restSaveName + "'." });
+            else
+                modBox.SetText("Would you like to save your game?");
+
+            modBox.AddButton(DaggerfallMessageBox.MessageBoxButtons.Yes);
+            modBox.AddButton(DaggerfallMessageBox.MessageBoxButtons.No, true);
+            modBox.PauseWhileOpen = true;
+
+            modBox.OnButtonClick += ((s, messageBoxButton) =>
+            {
+                s.CloseWindow();
+                if (messageBoxButton == DaggerfallMessageBox.MessageBoxButtons.Yes)
+                {
+                    SaveGame();
+                }
+
+                //is set false even before the user saves in the save window
+                //so far 0.10.24 it isn't a problem because the save button does not check for save prevention once the window is open
+                SuccessfulRest = false;
+            });
+
+            modBox.Show();
+        }
+    }
+
+    private static void SaveGame()
+    {
+        if (Modded_RegisterMod.UseSaveWindow)
+            DaggerfallUI.UIManager.PushWindow(UIWindowFactory.GetInstanceWithArgs(UIWindowType.UnitySaveGame,
+                new object[] { DaggerfallUI.UIManager, DaggerfallUnitySaveGameWindow.Modes.SaveGame, DaggerfallUI.UIManager.TopWindow, false }));
+        else
+        {
+            GameManager.Instance.SaveLoadManager.EnumerateSaves();
+            GameManager.Instance.SaveLoadManager.Save(GameManager.Instance.PlayerEntity.Name, restSaveName);
+        }
     }
 }

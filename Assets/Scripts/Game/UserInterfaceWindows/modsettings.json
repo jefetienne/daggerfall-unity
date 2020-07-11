@@ -21,7 +21,14 @@
                     "Description": "Minimum resting time required to save",
                     "$version": "v1",
                     "$type": "DaggerfallWorkshop.Game.Utility.ModSupport.ModSettings.SliderIntKey"
-                }
+                },
+                {
+                    "Value": false,
+                    "Name": "DisableSavePrompt",
+                    "Description": "Disables the prompt that asks whether or not you want to save",
+                    "$version": "v1",
+                    "$type": "DaggerfallWorkshop.Game.Utility.ModSupport.ModSettings.ToggleKey"
+                },
             ],
             "$version": "v1"
         }
