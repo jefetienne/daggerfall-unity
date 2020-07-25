@@ -109,7 +109,7 @@ namespace DaggerfallWorkshop.Game
         //Storing these methods to prevent GC alloc in the GetKey methods
         private Func<KeyCode, bool> UnityGetKey = Input.GetKey;
         private Func<KeyCode, bool> UnityGetKeyDown = Input.GetKeyDown;
-        private Func<KeyCode, bool> UnityGetKeyUp = Input.GetKeyDown;
+        private Func<KeyCode, bool> UnityGetKeyUp = Input.GetKeyUp;
 
         //Storing these methods to prevent GC alloc in the GetKey methods
         private Func<int, bool> AxisGetKey;
