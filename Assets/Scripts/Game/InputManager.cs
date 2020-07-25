@@ -31,6 +31,7 @@ namespace DaggerfallWorkshop.Game
         //there are only 16 recognized axes
         const int numAxes = 16;
         const int startingAxisKeyCode = 5000;
+        const int startingComboKeyCode = 6000;
 
         //if the force is greater than this threshold, round it up to 1
         float joystickMovementThreshold = 0.95F;
@@ -929,28 +930,104 @@ namespace DaggerfallWorkshop.Game
             return Input.GetMouseButton(button) || (EnableController && GetKey(joystickUICache[button]));
         }
 
-        public bool GetKey(KeyCode key)
+        Dictionary<int, Tuple<KeyCode, KeyCode>> combos = new Dictionary<int, Tuple<KeyCode, KeyCode>>();
+        public KeyCode GetComboCode(KeyCode a, KeyCode b)
+        {
+            return (KeyCode)(startingComboKeyCode + ((int)a ^ (((int)b << 8) | ((int)b >> 8))));
+        }
+
+        public KeyCode GetComboCode(String s)
+        {
+            var splice = s.Split('+');
+            if (splice.Length < 2)
+                return KeyCode.None;
+
+            var mod = ParseKeyCodeString(splice[0].TrimEnd());
+            var key = ParseKeyCodeString(splice[1].TrimStart());
+
+            if (mod == KeyCode.None || key == KeyCode.None)
+                return KeyCode.None;
+
+            return GetComboCode(mod, key);
+        }
+
+        public string GetComboString(KeyCode comboCode)
+        {
+            var c = GetCombo(comboCode);
+            if (c == null)
+                return comboCode.ToString();
+            return GetComboString(c.Item1, c.Item2);
+        }
+
+        public string GetComboString(KeyCode a, KeyCode b)
+        {
+            return String.Format("{0} + {1}", GetKeyString(a), GetKeyString(b));
+        }
+
+        public Tuple<KeyCode, KeyCode> AddCombo(KeyCode a, KeyCode b)
+        {
+            var c = new Tuple<KeyCode, KeyCode>(a, b);
+            combos[(int)GetComboCode(a, b)] = c;
+            return c;
+        }
+
+        public bool TryGetCombo(KeyCode comboHash, out Tuple<KeyCode, KeyCode> val)
+        {
+            return combos.TryGetValue((int)comboHash, out val);
+        }
+
+        public Tuple<KeyCode, KeyCode> GetCombo(KeyCode a, KeyCode b)
+        {
+            return GetCombo(GetComboCode(a, b)) ?? AddCombo(a, b);
+        }
+
+        public Tuple<KeyCode, KeyCode> GetCombo(KeyCode comboHash)
+        {
+            Tuple<KeyCode, KeyCode> cb;
+            if (TryGetCombo(comboHash, out cb))
+                return cb;
+            return null;
+        }
+
+        private bool GetKey(KeyCode key, Func<KeyCode, bool> unityGetKeyMethod, Func<int, bool> axisGetKeyMethod, bool keyDown)
         {
             KeyCode conv = ConvertJoystickButtonKeyCode(key);
-            var k = (((int)conv) < startingAxisKeyCode && Input.GetKey(conv)) || GetAxisKey((int)conv);
-            if (k)
+            var k = (((int)conv) < startingAxisKeyCode && unityGetKeyMethod(conv))
+                    || (((int)conv) < startingComboKeyCode && axisGetKeyMethod((int)conv));
+
+            Tuple<KeyCode, KeyCode> combo = null;
+            if (!k && TryGetCombo(conv, out combo))
+            {
+                //when a combo is used for a KeyUp, we want the modifier to still be held down, but check "KeyUp" for the other key
+                if (keyDown)
+                    k = GetKey(combo.Item1, unityGetKeyMethod, axisGetKeyMethod, keyDown)
+                        && GetKey(combo.Item2, unityGetKeyMethod, axisGetKeyMethod, keyDown);
+                else
+                    k = GetKey(combo.Item1, Input.GetKey, GetAxisKey, true)
+                        && GetKey(combo.Item2, unityGetKeyMethod, axisGetKeyMethod, keyDown);
+            }
+
+            if (k && keyDown)
+            {
                 LastKeyDown = conv;
+            }
+
             return k;
+        }
+
+        public bool GetKey(KeyCode key)
+        {
+            return GetKey(key, Input.GetKey, GetAxisKey, true);
         }
 
         public bool GetKeyDown(KeyCode key)
         {
-            KeyCode conv = ConvertJoystickButtonKeyCode(key);
-            var kd = (((int)conv) < startingAxisKeyCode && Input.GetKeyDown(conv)) || GetAxisKeyDown((int)conv);
-            if (kd)
-                LastKeyDown = conv;
-            return kd;
+            return GetKey(key, Input.GetKeyDown, GetAxisKeyDown, true);
         }
 
         public bool GetKeyUp(KeyCode key)
         {
-            KeyCode conv = ConvertJoystickButtonKeyCode(key);
-            return (((int)conv) < startingAxisKeyCode && Input.GetKeyUp(conv)) || GetAxisKeyUp((int)conv);
+            return GetKey(key, Input.GetKeyUp, GetAxisKeyUp, false);
         }
 
         public bool AnyKeyDown
@@ -963,8 +1040,20 @@ namespace DaggerfallWorkshop.Game
             }
         }
 
+        public bool AnyKeyUp
+        {
+            get
+            {
+                foreach (KeyCode k in KeyCodeList)
+                    if (GetKeyUp(k)) return true;
+                return false;
+            }
+        }
+
         public String GetKeyString(KeyCode key)
         {
+            if ((int)key >= startingComboKeyCode)
+                return GetComboString(key) ?? key.ToString();
             if (axisKeyCodeStrings.ContainsKey((int)key))
                 return axisKeyCodeStrings[(int)key];
             else
@@ -979,7 +1068,10 @@ namespace DaggerfallWorkshop.Game
             }
             else
             {
-                return (KeyCode)axisKeyCodeStrings.FirstOrDefault(x => x.Value == s).Key;
+                var axis = (KeyCode)axisKeyCodeStrings.FirstOrDefault(x => x.Value == s).Key;
+                if (axis == KeyCode.None)
+                    return GetComboCode(s);
+                return axis;
             }
         }
 
