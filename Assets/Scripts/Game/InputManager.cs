@@ -31,7 +31,7 @@ namespace DaggerfallWorkshop.Game
         //there are only 16 recognized axes
         const int numAxes = 16;
         const int startingAxisKeyCode = 5000;
-        const int startingComboKeyCode = 6000;
+        const int startingComboKeyCode = 65537;
 
         //if the force is greater than this threshold, round it up to 1
         float joystickMovementThreshold = 0.95F;
@@ -71,6 +71,7 @@ namespace DaggerfallWorkshop.Game
         KeyCode[] joystickUICache = new KeyCode[3]; //leftClick, rightClick, MiddleClick
         String[] cameraAxisBindingCache = new String[2];
         String[] movementAxisBindingCache = new String[2];
+        Dictionary<int, Tuple<KeyCode, KeyCode>> comboCache = new Dictionary<int, Tuple<KeyCode, KeyCode>>();
 
         List<Actions> currentActions = new List<Actions>();
         List<Actions> previousActions = new List<Actions>();
@@ -930,10 +931,19 @@ namespace DaggerfallWorkshop.Game
             return Input.GetMouseButton(button) || (EnableController && GetKey(joystickUICache[button]));
         }
 
-        Dictionary<int, Tuple<KeyCode, KeyCode>> combos = new Dictionary<int, Tuple<KeyCode, KeyCode>>();
         public KeyCode GetComboCode(KeyCode a, KeyCode b)
         {
-            return (KeyCode)(startingComboKeyCode + ((int)a ^ (((int)b << 8) | ((int)b >> 8))));
+            uint x = (uint)a;
+            uint y = (uint)b;
+
+            // Only positive 16-bit keycodes <= 32767 allowed to be used for combos.
+            // We want our combo code to be a positive signed integer to easily check against the const startingComboKeyCode,
+            // so we only allow keycodes <= 32767 to avoid the most significant bit being 1 and making the combo code negative
+            if (x > 32767 || y > 32767 || x < 0 || y < 0)
+                return KeyCode.None;
+
+            //from left-to-right: bits 0-15 are the first, 16-31 are the second
+            return (KeyCode)(x << 16 | y);
         }
 
         public KeyCode GetComboCode(String s)
@@ -951,11 +961,25 @@ namespace DaggerfallWorkshop.Game
             return GetComboCode(mod, key);
         }
 
+        public Tuple<KeyCode, KeyCode> GetRawComboFromCode(KeyCode comboCode)
+        {
+            uint a = (uint)comboCode >> 16;
+            uint b = ((uint)comboCode << 16) >> 16;
+            return new Tuple<KeyCode, KeyCode>((KeyCode)a, (KeyCode)b);
+        }
+
+        public Tuple<KeyCode, KeyCode> GetCombo(KeyCode comboCode)
+        {
+            Tuple<KeyCode, KeyCode> cb;
+            if (!comboCache.TryGetValue((int)comboCode, out cb))
+                comboCache[(int)comboCode] = (cb = GetRawComboFromCode(comboCode));
+
+            return cb;
+        }
+
         public string GetComboString(KeyCode comboCode)
         {
             var c = GetCombo(comboCode);
-            if (c == null)
-                return comboCode.ToString();
             return GetComboString(c.Item1, c.Item2);
         }
 
@@ -964,40 +988,18 @@ namespace DaggerfallWorkshop.Game
             return String.Format("{0} + {1}", GetKeyString(a), GetKeyString(b));
         }
 
-        public Tuple<KeyCode, KeyCode> AddCombo(KeyCode a, KeyCode b)
-        {
-            var c = new Tuple<KeyCode, KeyCode>(a, b);
-            combos[(int)GetComboCode(a, b)] = c;
-            return c;
-        }
-
-        public bool TryGetCombo(KeyCode comboHash, out Tuple<KeyCode, KeyCode> val)
-        {
-            return combos.TryGetValue((int)comboHash, out val);
-        }
-
-        public Tuple<KeyCode, KeyCode> GetCombo(KeyCode a, KeyCode b)
-        {
-            return GetCombo(GetComboCode(a, b)) ?? AddCombo(a, b);
-        }
-
-        public Tuple<KeyCode, KeyCode> GetCombo(KeyCode comboHash)
-        {
-            Tuple<KeyCode, KeyCode> cb;
-            if (TryGetCombo(comboHash, out cb))
-                return cb;
-            return null;
-        }
-
         private bool GetKey(KeyCode key, Func<KeyCode, bool> unityGetKeyMethod, Func<int, bool> axisGetKeyMethod, bool keyDown)
         {
             KeyCode conv = ConvertJoystickButtonKeyCode(key);
-            var k = (((int)conv) < startingAxisKeyCode && unityGetKeyMethod(conv))
-                    || (((int)conv) < startingComboKeyCode && axisGetKeyMethod((int)conv));
+            var k = false;
 
-            Tuple<KeyCode, KeyCode> combo = null;
-            if (!k && TryGetCombo(conv, out combo))
+            if ((int)conv < startingAxisKeyCode)
+                k = unityGetKeyMethod(conv);
+            else if((int)conv < startingComboKeyCode)
+                k = axisGetKeyMethod((int)conv);
+            else
             {
+                Tuple<KeyCode, KeyCode> combo = GetCombo(conv);
                 //when a combo is used for a KeyUp, we want the modifier to still be held down, but check "KeyUp" for the other key
                 if (keyDown)
                     k = GetKey(combo.Item1, unityGetKeyMethod, axisGetKeyMethod, keyDown)
