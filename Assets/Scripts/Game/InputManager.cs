@@ -106,6 +106,17 @@ namespace DaggerfallWorkshop.Game
 
         bool pauseController = false;
 
+        //Storing these methods to prevent GC alloc in the GetKey methods
+        private Func<KeyCode, bool> UnityGetKey = Input.GetKey;
+        private Func<KeyCode, bool> UnityGetKeyDown = Input.GetKeyDown;
+        private Func<KeyCode, bool> UnityGetKeyUp = Input.GetKeyDown;
+
+        //Storing these methods to prevent GC alloc in the GetKey methods
+        private Func<int, bool> AxisGetKey;
+        private Func<int, bool> AxisGetKeyDown;
+        private Func<int, bool> AxisGetKeyUp;
+
+
         #endregion
 
         #region Structures
@@ -354,6 +365,10 @@ namespace DaggerfallWorkshop.Game
 
         void Start()
         {
+            AxisGetKey = GetAxisKey;
+            AxisGetKeyDown = GetAxisKeyDown;
+            AxisGetKeyUp = GetAxisKeyUp;
+
             // Read acceleration setting
             moveAcceleration = DaggerfallUnity.Settings.MovementAcceleration;
 
@@ -1019,17 +1034,17 @@ namespace DaggerfallWorkshop.Game
 
         public bool GetKey(KeyCode key)
         {
-            return GetKey(key, Input.GetKey, GetAxisKey, true);
+            return GetKey(key, UnityGetKey, AxisGetKey, true);
         }
 
         public bool GetKeyDown(KeyCode key)
         {
-            return GetKey(key, Input.GetKeyDown, GetAxisKeyDown, true);
+            return GetKey(key, UnityGetKeyDown, AxisGetKeyDown, true);
         }
 
         public bool GetKeyUp(KeyCode key)
         {
-            return GetKey(key, Input.GetKeyUp, GetAxisKeyUp, false);
+            return GetKey(key, UnityGetKeyUp, AxisGetKeyUp, false);
         }
 
         public bool AnyKeyDown
