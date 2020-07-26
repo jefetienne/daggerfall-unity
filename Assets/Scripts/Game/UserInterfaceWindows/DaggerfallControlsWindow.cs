@@ -185,12 +185,47 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         {
             HashSet<String> recorded = new HashSet<String>();
             HashSet<String> dupes = new HashSet<String>();
-            foreach (String str in texts)
+            Dictionary<String, HashSet<String>> modifiers = new Dictionary<string, HashSet<string>>();
+
+            // Sort by combos first to record their modifiers
+            var list = texts.OrderByDescending(str =>
+            {
+                if (str.Contains('+'))
+                {
+                    var c = InputManager.Instance.GetCombo(InputManager.Instance.GetComboCode(str));
+                    // Only record the modifier (i.e. the button that gets hold down first)
+                    var kc1 = InputManager.Instance.GetKeyString(c.Item1);
+
+                    if (!recorded.Contains(kc1))
+                        recorded.Add(kc1);
+
+                    HashSet<String> mods;
+                    if (modifiers.TryGetValue(kc1, out mods))
+                        mods.Add(str);
+                    else
+                    {
+                        modifiers[kc1] = new HashSet<String>();
+                        modifiers[kc1].Add(str);
+                    }
+
+                    return true;
+                }
+
+                return false;
+            });
+
+            foreach (String str in list)
             {
                 if(!recorded.Contains(str))
                     recorded.Add(str);
                 else if (str != "None")
                     dupes.Add(str);
+            }
+
+            foreach (var kv in modifiers)
+            {
+                if (dupes.Contains(kv.Key))
+                    dupes.UnionWith(kv.Value);
             }
             return dupes;
         }
@@ -402,9 +437,24 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 setWaitingForInput(true);
                 yield return null;
             }
+
+            KeyCode code1 = InputManager.Instance.LastKeyDown;
+
+            yield return new WaitForSecondsRealtime(0.05f);
+
+            while (!InputManager.Instance.AnyKeyDown)
+            {
+                if (InputManager.Instance.AnyKeyUp)
+                    break;
+
+                setWaitingForInput(true);
+                yield return null;
+            }
+
             setWaitingForInput(false);
 
-            KeyCode code = InputManager.Instance.LastKeyDown;
+            KeyCode code2 = InputManager.Instance.LastKeyDown;
+            KeyCode code = code1 == code2 ? code1 : InputManager.Instance.GetComboCode(code1, code2);
 
             if (code != KeyCode.None)
             {

@@ -71,10 +71,13 @@ namespace DaggerfallWorkshop.Game
         KeyCode[] joystickUICache = new KeyCode[3]; //leftClick, rightClick, MiddleClick
         String[] cameraAxisBindingCache = new String[2];
         String[] movementAxisBindingCache = new String[2];
+        HashSet<KeyCode> modifierCache = new HashSet<KeyCode>();
         Dictionary<int, Tuple<KeyCode, KeyCode>> comboCache = new Dictionary<int, Tuple<KeyCode, KeyCode>>();
 
         List<Actions> currentActions = new List<Actions>();
         List<Actions> previousActions = new List<Actions>();
+        KeyCode heldModifier;
+
         bool isPaused;
         bool wasPaused;
         float inputWaitTimer;
@@ -487,6 +490,7 @@ namespace DaggerfallWorkshop.Game
             }
 
             // Process actions from input sources
+            FindModifierActions();
             FindKeyboardActions();
             FindInputAxisActions();
 
@@ -841,7 +845,7 @@ namespace DaggerfallWorkshop.Game
 
             string json = SaveLoadManager.Serialize(keyBindsData.GetType(), keyBindsData);
             File.WriteAllText(path, json);
-            UpdateAxisBindingCache();
+            UpdateInputBindingCache();
             RaiseSavedKeyBindsEvent();
         }
 
@@ -925,7 +929,7 @@ namespace DaggerfallWorkshop.Game
 
             SetJoystickUIBinding(KeyCode.JoystickButton0, JoystickUIActions.LeftClick);
             SetJoystickUIBinding(KeyCode.JoystickButton1, JoystickUIActions.RightClick);
-            UpdateAxisBindingCache();
+            UpdateInputBindingCache();
 
             foreach (AxisActions axisAction in Enum.GetValues(typeof(AxisActions)))
                 SetAxisActionInversion(axisAction, false);
@@ -1126,7 +1130,7 @@ namespace DaggerfallWorkshop.Game
             }
         }
 
-        private void UpdateAxisBindingCache()
+        private void UpdateInputBindingCache()
         {
             joystickUICache[0] = GetJoystickUIBinding(JoystickUIActions.LeftClick);
             joystickUICache[1] = GetJoystickUIBinding(JoystickUIActions.RightClick);
@@ -1136,6 +1140,11 @@ namespace DaggerfallWorkshop.Game
             cameraAxisBindingCache[1] = GetAxisBinding(AxisActions.CameraVertical);
             movementAxisBindingCache[0] = GetAxisBinding(AxisActions.MovementHorizontal);
             movementAxisBindingCache[1] = GetAxisBinding(AxisActions.MovementVertical);
+
+            modifierCache = new HashSet<KeyCode>(
+                actionKeyDict.Keys
+                .Where(x => (int)x >= startingComboKeyCode)
+                .Select(x => this.GetCombo(x).Item1));
         }
 
         // Sets KeyCode binding only if action is missing
@@ -1239,7 +1248,7 @@ namespace DaggerfallWorkshop.Game
 
             TestSetJoystickUIBinding(KeyCode.JoystickButton0, JoystickUIActions.LeftClick);
             TestSetJoystickUIBinding(KeyCode.JoystickButton1, JoystickUIActions.RightClick);
-            UpdateAxisBindingCache();
+            UpdateInputBindingCache();
 
             foreach (AxisActions axisAction in Enum.GetValues(typeof(AxisActions)))
                 if(!axisActionInvertDict.ContainsKey((int)axisAction))
@@ -1464,6 +1473,16 @@ namespace DaggerfallWorkshop.Game
             return ret;
         }
 
+        void FindModifierActions()
+        {
+            heldModifier = KeyCode.None;
+            foreach (var modifier in modifierCache)
+            {
+                if (GetKey(modifier))
+                    heldModifier = modifier;
+            }
+        }
+
         // Enumerate all keyboard actions in progress
         void FindKeyboardActions()
         {
@@ -1471,6 +1490,9 @@ namespace DaggerfallWorkshop.Game
             while (enumerator.MoveNext())
             {
                 var element = enumerator.Current;
+                if (heldModifier != KeyCode.None && actionKeyDict.ContainsKey(GetComboCode(heldModifier, element.Key)))
+                    continue;
+
                 if (GetKey(element.Key))
                 {
                     // Add current action to list
@@ -1610,7 +1632,7 @@ namespace DaggerfallWorkshop.Game
                     if (!axisActionKeyDict.ContainsKey((String)item.Key))
                         axisActionKeyDict.Add((String)item.Key, item.Value);
                 }
-                UpdateAxisBindingCache();
+                UpdateInputBindingCache();
             }
             else
             {
@@ -1626,7 +1648,7 @@ namespace DaggerfallWorkshop.Game
                     if (!joystickUIDict.ContainsKey(key))
                         joystickUIDict.Add(key, val);
                 }
-                UpdateAxisBindingCache();
+                UpdateInputBindingCache();
             }
 
             if (keyBindsData.axisActionInversions != null)
