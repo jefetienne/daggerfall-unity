@@ -1173,13 +1173,13 @@ namespace DaggerfallWorkshop.Game
             movementAxisBindingCache[0] = GetAxisBinding(AxisActions.MovementHorizontal);
             movementAxisBindingCache[1] = GetAxisBinding(AxisActions.MovementVertical);
 
-            modifierCache = new HashSet<KeyCode>(
-                actionKeyDict.Keys
-                .Where(x => (int)x >= startingComboKeyCode)
-                .Select(x => this.GetCombo(x).Item1));
-
             foreach(Actions a in Enum.GetValues(typeof(Actions)))
                 MapSecondaryBindings(a);
+
+            modifierCache = new HashSet<KeyCode>(
+                primarySecondaryKeybindDict.Keys
+                .Where(x => (int)x >= startingComboKeyCode)
+                .Select(x => this.GetCombo((KeyCode)x).Item1));
         }
 
         KeyCode GetSecondaryBinding(KeyCode a)
@@ -1611,7 +1611,9 @@ namespace DaggerfallWorkshop.Game
 
                 // If there is currently a held modifier, and the current key is binded in conjunction with it, then we ignore it
                 // E.g. Shift is a modifier, Jump is Space. Shift+Space opens a menu, but we don't want to jump while Shift is held down.
-                if (heldModifier != KeyCode.None && actionKeyDict.ContainsKey(GetComboCode(heldModifier, element.Key)))
+                if (heldModifier != KeyCode.None
+                    && (primarySecondaryKeybindDict.ContainsKey((int)GetComboCode(heldModifier, element.Key))
+                        || primarySecondaryKeybindDict.ContainsKey((int)GetComboCode(heldModifier, GetSecondaryBinding(element.Key)))))
                     continue;
 
                 if (GetKey(element.Key))
