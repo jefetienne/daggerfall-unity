@@ -132,14 +132,48 @@ namespace DaggerfallWorkshop.Game
         {
             HashSet<String> recorded = new HashSet<String>();
             HashSet<String> dupes = new HashSet<String>();
+            Dictionary<String, HashSet<String>> modifiers = new Dictionary<string, HashSet<string>>();
             String none = KeyCode.None.ToString();
 
-            foreach (String str in texts)
+            // Sort by combos first to record their modifiers
+            var list = texts.OrderByDescending(str =>
             {
-                if (!recorded.Contains(str))
+                if (str.Contains('+'))
+                {
+                    var c = InputManager.Instance.GetCombo(InputManager.Instance.GetComboCode(str));
+                    // Only record the modifier (i.e. the button that gets hold down first)
+                    var kc1 = InputManager.Instance.GetKeyString(c.Item1);
+
+                    if (!recorded.Contains(kc1))
+                        recorded.Add(kc1);
+
+                    HashSet<String> mods;
+                    if (modifiers.TryGetValue(kc1, out mods))
+                        mods.Add(str);
+                    else
+                    {
+                        modifiers[kc1] = new HashSet<String>();
+                        modifiers[kc1].Add(str);
+                    }
+
+                    return true;
+                }
+
+                return false;
+            });
+
+            foreach (String str in list)
+            {
+                if(!recorded.Contains(str))
                     recorded.Add(str);
                 else if (str != none)
                     dupes.Add(str);
+            }
+
+            foreach (var kv in modifiers)
+            {
+                if (dupes.Contains(kv.Key))
+                    dupes.UnionWith(kv.Value);
             }
             return dupes;
         }

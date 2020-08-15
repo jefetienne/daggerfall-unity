@@ -376,9 +376,24 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 setWaitingForInput(true);
                 yield return null;
             }
+
+            KeyCode code1 = InputManager.Instance.LastKeyDown;
+
+            yield return new WaitForSecondsRealtime(0.05f);
+
+            while (!InputManager.Instance.AnyKeyDown)
+            {
+                if (InputManager.Instance.AnyKeyUp)
+                    break;
+
+                setWaitingForInput(true);
+                yield return null;
+            }
+
             setWaitingForInput(false);
 
-            KeyCode code = InputManager.Instance.LastKeyDown;
+            KeyCode code2 = InputManager.Instance.LastKeyDown;
+            KeyCode code = code1 == code2 ? code1 : InputManager.Instance.GetComboCode(code1, code2);
 
             if (code != KeyCode.None)
             {
