@@ -447,6 +447,9 @@ namespace DaggerfallWorkshop.Game
                 previousAxisRaw[kv.Key] = kv.Value;
             previousAxisRawQueue.Clear();
 
+            // Search for modifiers, even when the game is paused
+            FindModifierActions();
+
             // Clear look and mouse axes
             mouseX = 0;
             mouseY = 0;
@@ -522,7 +525,6 @@ namespace DaggerfallWorkshop.Game
             }
 
             // Process actions from input sources
-            FindModifierActions();
             FindKeyboardActions();
             FindInputAxisActions();
 
@@ -1432,7 +1434,7 @@ namespace DaggerfallWorkshop.Game
             return GetSingleKey(key, UnityGetKeyUp, AxisGetKeyUp, false);
         }
 
-        bool GetSingleKey(KeyCode key, Func<KeyCode, bool> unityGetKeyMethod, Func<int, bool> axisGetKeyMethod, bool keyDown)
+        bool GetSingleKey(KeyCode key, Func<KeyCode, bool> unityGetKeyMethod, Func<int, bool> axisGetKeyMethod, bool keyDown, bool filter = true)
         {
             if (key == KeyCode.None)
                 return false;
@@ -1440,20 +1442,31 @@ namespace DaggerfallWorkshop.Game
             KeyCode conv = ConvertJoystickButtonKeyCode(key);
             var k = false;
 
-            if ((int)conv < startingAxisKeyCode)
-                k = unityGetKeyMethod(conv);
-            else if((int)conv < startingComboKeyCode)
-                k = axisGetKeyMethod((int)conv);
+            if((int)conv < startingComboKeyCode)
+            {
+                // If there is currently a held modifier, and the current key is binded in conjunction with it, then we ignore it
+                // E.g. Shift is a modifier, Jump is Space. Shift+Space opens a menu, but we don't want to jump while Shift is held down.
+                if (filter && heldModifier != KeyCode.None
+                    && ((primarySecondaryKeybindDict.ContainsKey((int)GetComboCode(heldModifier, conv))
+                        || primarySecondaryKeybindDict.ContainsKey((int)GetComboCode(heldModifier, GetSecondaryBinding(conv))))))
+                    return false;
+
+                if ((int)conv < startingAxisKeyCode)
+                    k = unityGetKeyMethod(conv);
+                else
+                    k = axisGetKeyMethod((int)conv);
+            }
             else
             {
                 Tuple<KeyCode, KeyCode> combo = GetCombo(conv);
-                //when a combo is used for a KeyUp, we want the modifier to still be held down, but check "KeyUp" for the other key
+                // When a combo is used for a KeyDown, we want the modifier to still be held down, but check "KeyDown" for the other key
+                // When a combo is used for a KeyUp, we want the modifier to still be held down, but check "KeyUp" for the other key
                 if (keyDown)
-                    k = GetSingleKey(combo.Item1, unityGetKeyMethod, axisGetKeyMethod, keyDown)
-                        && GetSingleKey(combo.Item2, unityGetKeyMethod, axisGetKeyMethod, keyDown);
+                    k = GetSingleKey(combo.Item1, UnityGetKey, AxisGetKey, true)
+                        && GetSingleKey(combo.Item2, unityGetKeyMethod, axisGetKeyMethod, keyDown, false);
                 else
-                    k = GetSingleKey(combo.Item1, Input.GetKey, GetAxisKey, true)
-                        && GetSingleKey(combo.Item2, unityGetKeyMethod, axisGetKeyMethod, keyDown);
+                    k = GetSingleKey(combo.Item1, UnityGetKey, AxisGetKey, true)
+                        && GetSingleKey(combo.Item2, unityGetKeyMethod, axisGetKeyMethod, keyDown, false);
             }
 
             if (k && keyDown)
@@ -1608,13 +1621,6 @@ namespace DaggerfallWorkshop.Game
             while (enumerator.MoveNext())
             {
                 var element = enumerator.Current;
-
-                // If there is currently a held modifier, and the current key is binded in conjunction with it, then we ignore it
-                // E.g. Shift is a modifier, Jump is Space. Shift+Space opens a menu, but we don't want to jump while Shift is held down.
-                if (heldModifier != KeyCode.None
-                    && (primarySecondaryKeybindDict.ContainsKey((int)GetComboCode(heldModifier, element.Key))
-                        || primarySecondaryKeybindDict.ContainsKey((int)GetComboCode(heldModifier, GetSecondaryBinding(element.Key)))))
-                    continue;
 
                 if (GetKey(element.Key))
                 {
