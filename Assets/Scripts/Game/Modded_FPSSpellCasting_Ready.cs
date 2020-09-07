@@ -49,14 +49,18 @@ namespace DaggerfallWorkshop.Game
         const int releaseFrame = 5;
         const float smallFrameAdjust = 0.134f;
         const float animSpeed = 0.04f;                              // Set slower than classic for now
+        const float multiplierX = 1.3f;
+        const float multiplierY = 1.4f;
 
         ElementTypes currentAnimType = ElementTypes.None;
         AnimationRecord handRecord;
-        Dictionary<ElementTypes, Texture2D> glowTextures;
+        Dictionary<ElementTypes, Texture2D> glowTextures = new Dictionary<ElementTypes, Texture2D>();
         int currentFrame = -1;
 
         Rect leftHandPosition;
         Rect rightHandPosition;
+        Rect leftHandGlowPosition;
+        Rect rightHandGlowPosition;
         Rect leftHandAnimRect;
         Rect rightHandAnimRect;
         float handScaleX;
@@ -100,6 +104,9 @@ namespace DaggerfallWorkshop.Game
             if (Event.current.type.Equals(EventType.Repaint))
             {
                 // Draw spell cast texture behind other HUD elements
+                //GUI.DrawTextureWithTexCoords(leftHandGlowPosition, glowTextures[ElementTypes.Fire], leftHandAnimRect);
+                //GUI.DrawTextureWithTexCoords(rightHandGlowPosition, glowTextures[ElementTypes.Fire], rightHandAnimRect);
+
                 GUI.DrawTextureWithTexCoords(leftHandPosition, handRecord.Texture, leftHandAnimRect);
                 GUI.DrawTextureWithTexCoords(rightHandPosition, handRecord.Texture, rightHandAnimRect);
             }
@@ -152,13 +159,14 @@ namespace DaggerfallWorkshop.Game
 
                 var pixels = texture.GetPixels32();
                 for (int i = 0; i < pixels.Length; i++) {
-                    pixels[i] = new Color32(217, 17, 17, 0);
+                    pixels[i] = new Color32(217, 17, 17, pixels[i].a);
                 }
 
-                glowTextures[ElementTypes.Fire] = new Texture2D(texture.width, texture.height);
+                glowTextures[ElementTypes.Fire] = new Texture2D(texture.width, texture.height, TextureFormat.ARGB32, false);
                 glowTextures[ElementTypes.Fire].SetPixels32(pixels);
+                glowTextures[ElementTypes.Fire].Apply(true);
+                glowTextures[ElementTypes.Fire].filterMode = (FilterMode)DaggerfallUnity.Settings.MainFilterMode;
 
-                animationRecords.Texture = glowTextures[ElementTypes.Fire];
             }
 
             // Use as current anims
@@ -199,28 +207,40 @@ namespace DaggerfallWorkshop.Game
 
             // Source casting animations are designed to fit inside a fixed 320x200 display
             // This means they might be a little stretched on widescreen displays
-            AlignLeftHand(width, height);
-            AlignRightHand(width, height);
+            AlignLeftHand(width, height, out leftHandPosition);
+            AlignRightHand(width, height, out rightHandPosition);
+            AlignLeftHand(width, height, out leftHandGlowPosition, true);
+            AlignRightHand(width, height, out rightHandGlowPosition, true);
 
             return true;
         }
 
-        private void AlignLeftHand(int width, int height)
+        private void AlignLeftHand(int width, int height, out Rect pos, bool glow = false)
         {
-            leftHandPosition = new Rect(
-                Screen.width * offset,
-                Screen.height - height * handScaleY,
-                width * handScaleX,
-                height * handScaleY);
+            var scaleX = glow ? handScaleX * multiplierX : handScaleX;
+            var scaleY = glow ? handScaleY * multiplierY : handScaleY;
+            var offX = glow ? -((width * scaleX) - (width * handScaleX)) / 2: 0;
+            var offY = glow ? ((height * scaleY) - (height * handScaleY)) / 2: 0;
+
+            pos = new Rect(
+                (Screen.width * offset) + offX,
+                (Screen.height - height * scaleY) + offY,
+                width * scaleX,
+                height * scaleY);
         }
 
-        private void AlignRightHand(int width, int height)
+        private void AlignRightHand(int width, int height, out Rect pos, bool glow = false)
         {
-            rightHandPosition = new Rect(
-                Screen.width * (1f - offset) - width * handScaleX,
-                Screen.height - height * handScaleY,
-                width * handScaleX,
-                height * handScaleY);
+            var scaleX = glow ? handScaleX * multiplierX : handScaleX;
+            var scaleY = glow ? handScaleY * multiplierY : handScaleY;
+            var offX = glow ? ((width * scaleX) - (width * handScaleX)) / 2 : 0;
+            var offY = glow ? ((height * scaleY) - (height * handScaleY)) / 2 : 0;
+
+            pos = new Rect(
+                (Screen.width * (1f - offset) - width * scaleX) + offX,
+                (Screen.height - height * scaleY) + offY,
+                width * scaleX,
+                height * scaleY);
         }
 
         //the mod magic comes in here
