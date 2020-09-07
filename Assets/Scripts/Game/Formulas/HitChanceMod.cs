@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -64,8 +64,10 @@ namespace HitChance
 		//0.10.23
         public static int? CalculateAttackDamage(DaggerfallEntity attacker, DaggerfallEntity target, int enemyAnimStateRecord, int weaponAnimTime, DaggerfallUnityItem weapon)
         {
-            if (attacker == null || target == null)
+            if (attacker == null || target == null) {
+                Debug.Log("attacker, target: " + attacker + "," + target);
                 return null;
+            }
 
             int damageModifiers = 0;
             int damage = 0;
@@ -99,8 +101,9 @@ namespace HitChance
                 {
                     if (attacker == player)
                     {
-                        DaggerfallUI.Instance.PopupMessage(HardStrings.materialIneffective);
+                        DaggerfallUI.Instance.PopupMessage(TextManager.Instance.GetLocalizedText("materialIneffective"));
                     }
+                    Debug.Log("ineffective");
                     return null;
                 }
                 // Get weapon skill used
@@ -195,6 +198,7 @@ namespace HitChance
             }
 
             damage = Mathf.Max(0, damage);
+            Debug.Log("duper: " + damage);
 
             FormulaHelper.DamageEquipment(attacker, target, damage, weapon, struckBodyPart);
 
@@ -217,6 +221,7 @@ namespace HitChance
             }
             //Debug.LogFormat("Damage {0} applied, animTime={1}  ({2})", damage, weaponAnimTime, GameManager.Instance.WeaponManager.ScreenWeapon.WeaponState);
 
+            Debug.Log("damage: " + damage);
             return (int?)damage;
         }
 
