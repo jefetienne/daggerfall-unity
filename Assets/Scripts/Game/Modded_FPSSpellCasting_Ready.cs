@@ -52,6 +52,7 @@ namespace DaggerfallWorkshop.Game
 
         ElementTypes currentAnimType = ElementTypes.None;
         AnimationRecord handRecord;
+        Dictionary<ElementTypes, Texture2D> glowTextures;
         int currentFrame = -1;
 
         Rect leftHandPosition;
@@ -119,7 +120,6 @@ namespace DaggerfallWorkshop.Game
             string filename = WeaponBasics.GetMagicAnimFilename(elementType);
             string path = Path.Combine(DaggerfallUnity.Instance.Arena2Path, filename);
             CifRciFile cifFile = new CifRciFile();
-
             if (!cifFile.Load(path, FileUsage.UseMemory, true))
                 throw new Exception(string.Format("Could not load spell anims file {0}", path));
 
@@ -149,6 +149,16 @@ namespace DaggerfallWorkshop.Game
                 texture.filterMode = (FilterMode)DaggerfallUnity.Settings.MainFilterMode;
                 animationRecords.Texture = texture;
                 animationRecords.Size = cifFile.GetSize(record);
+
+                var pixels = texture.GetPixels32();
+                for (int i = 0; i < pixels.Length; i++) {
+                    pixels[i] = new Color32(217, 17, 17, 0);
+                }
+
+                glowTextures[ElementTypes.Fire] = new Texture2D(texture.width, texture.height);
+                glowTextures[ElementTypes.Fire].SetPixels32(pixels);
+
+                animationRecords.Texture = glowTextures[ElementTypes.Fire];
             }
 
             // Use as current anims
