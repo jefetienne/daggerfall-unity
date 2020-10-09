@@ -20,6 +20,7 @@ using DaggerfallWorkshop.Game.MagicAndEffects;
 using DaggerfallWorkshop.Game.MagicAndEffects.MagicEffects;
 using DaggerfallWorkshop.Game.UserInterfaceWindows;
 using DaggerfallWorkshop.Game.UserInterface;
+using DaggerfallWorkshop.Utility.AssetInjection;
 
 namespace Modded_Tooltips_Interaction
 {
@@ -27,13 +28,33 @@ namespace Modded_Tooltips_Interaction
     {
 
         #region Fields
+
+        #region Raycasting
+
         GameObject mainCamera;
         int playerLayerMask = 0;
         const float rayDistance = 4;
         Transform prevHit;
         string prevText;
 
+        #endregion
+
+        PlayerEnterExit playerEnterExit;
+        PlayerGPS playerGPS;
+        PlayerActivate playerActivate;
+
+        #region Stolen methods/variables/properties
+
+        byte[] openHours;
+        byte[] closeHours;
+        MethodInfo buildingIsUnlockedMethodInfo;
+        MethodInfo getBuildingLockValueMethodInfo;
+
         Panel nativePanel;
+
+        #endregion
+
+        #region Tooltip
 
         const int defaultMarginSize = 2;
 
@@ -55,6 +76,8 @@ namespace Modded_Tooltips_Interaction
 
         #endregion
 
+        #endregion
+
         [Invoke(StateManager.StateTypes.Game)]
         public static void InitAtGameState(InitParams initParams)
         {
@@ -69,17 +92,50 @@ namespace Modded_Tooltips_Interaction
 
         public Modded_HUDTooltipWindow()
         {
+            // Tooltip
             font = DaggerfallUI.DefaultFont;
             BackgroundColor = DaggerfallUI.DaggerfallUnityDefaultToolTipBackgroundColor;
             SetMargins(Margins.All, defaultMarginSize);
 
+            // Raycasting
+            mainCamera = GameObject.FindGameObjectWithTag("MainCamera");
+            playerLayerMask = ~(1 << LayerMask.NameToLayer("Player"));
+
+            // Reading
+            playerEnterExit = GameManager.Instance.PlayerEnterExit;
+            playerGPS = GameManager.Instance.PlayerGPS;
+            playerActivate = GameManager.Instance.PlayerActivate;
+
+            // Stealing hidden variables/methods
+
             Type type = DaggerfallUI.Instance.DaggerfallHUD.GetType();
-            var prop = type.BaseType.GetProperty("NativePanel",
+            var prop = type.BaseType.GetProperty(
+                "NativePanel",
                 BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
             nativePanel = (Panel)prop.GetValue(DaggerfallUI.Instance.DaggerfallHUD);
 
-            mainCamera = GameObject.FindGameObjectWithTag("MainCamera");
-            playerLayerMask = ~(1 << LayerMask.NameToLayer("Player"));
+            type = GameManager.Instance.PlayerActivate.GetType();
+
+            buildingIsUnlockedMethodInfo = type.GetMethod(
+                "BuildingIsUnlocked",
+                BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+
+            getBuildingLockValueMethodInfo = type.GetMethod(
+                "GetBuildingLockValue",
+                BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static,
+                null,
+                new Type[] { typeof(BuildingSummary) },
+                null);
+            
+            openHours = (byte[])type.GetField(
+                "openHours",
+                BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static)
+                .GetValue(playerActivate);
+
+            closeHours = (byte[])type.GetField(
+                "closeHours",
+                BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static)
+                .GetValue(playerActivate);
         }
 
         #endregion
@@ -146,10 +202,15 @@ namespace Modded_Tooltips_Interaction
                         else
                             ret = "Door\rLock Level: "+door.CurrentLockValue;
                     }
-                    /*else if (CheckComponent<DaggerfallActionDoor>(hit, out comp))
+                    else
                     {
-
-                    }*/
+                        Transform doorOwner;
+                        DaggerfallStaticDoors doors = GetDoors(hit.transform, out doorOwner);
+                        if (doors)
+                        {
+                            ret = GetStaticDoorText(doors, hit, doorOwner);
+                        }
+                    }
 
                     prevText = ret;
 
@@ -160,10 +221,241 @@ namespace Modded_Tooltips_Interaction
             return null;
         }
 
+        string GetStaticDoorText(DaggerfallStaticDoors doors, RaycastHit hit, Transform doorOwner)
+        {
+            StaticDoor door;
+
+            var hashit = HasHit(doors, hit.point, out door); //doors.HasHit(hit.point, out door);
+            //Debug.Log("GETSTATICDOORTEXT"+hashit);
+
+            if (hashit || CustomDoor.HasHit(hit, out door))
+            {
+                if (door.doorType == DoorTypes.Building && !playerEnterExit.IsPlayerInside)
+                {
+                    // Check for a static building hit
+                    bool hitBuilding;
+                    StaticBuilding building;
+                    DFLocation.BuildingTypes buildingType;
+                    bool buildingUnlocked;
+                    int buildingLockValue;
+
+                    Transform buildingOwner;
+                    DaggerfallStaticBuildings buildings = GetBuildings(hit.transform, out buildingOwner);
+                    if (buildings && buildings.HasHit(hit.point, out building))
+                    {
+                        hitBuilding = true;
+
+                        // Get building directory for location
+                        BuildingDirectory buildingDirectory = GameManager.Instance.StreamingWorld.GetCurrentBuildingDirectory();
+                        if (!buildingDirectory)
+                            return "<ERR: 010>";
+
+                        // Get detailed building data from directory
+                        BuildingSummary buildingSummary;
+                        if (!buildingDirectory.GetBuildingSummary(building.buildingKey, out buildingSummary))
+                            return "<ERR: 011>";
+
+                        buildingUnlocked = BuildingIsUnlocked(buildingSummary);
+                        buildingLockValue = GetBuildingLockValue(buildingSummary);
+                        buildingType = buildingSummary.BuildingType;
+
+                        // Discover building
+                        playerGPS.DiscoverBuilding(building.buildingKey);
+
+                        // Get discovered building
+                        PlayerGPS.DiscoveredBuilding db;
+                        if (playerGPS.GetDiscoveredBuilding(building.buildingKey, out db))
+                        {
+                            // Check against quest system for an overriding quest-assigned display name for this building
+                            string tooltip = db.displayName;
+
+                            if (!buildingUnlocked && buildingLockValue > 0)
+                                tooltip += "\r" + "Lock Level: " + buildingLockValue;
+
+                            if (!buildingUnlocked && buildingType < DFLocation.BuildingTypes.Temple
+                                && buildingType != DFLocation.BuildingTypes.HouseForSale)
+                            {
+                                string buildingClosedMessage = (buildingType == DFLocation.BuildingTypes.GuildHall) 
+                                                                ? TextManager.Instance.GetLocalizedText("guildClosed")
+                                                                : TextManager.Instance.GetLocalizedText("storeClosed");
+
+                                buildingClosedMessage = buildingClosedMessage.Replace("%d1", openHours[(int)buildingType].ToString());
+                                buildingClosedMessage = buildingClosedMessage.Replace("%d2", closeHours[(int)buildingType].ToString());
+                                tooltip += "\r" + buildingClosedMessage;
+                            }
+
+                            prevDoorText = tooltip;
+
+                            return tooltip;
+                        }
+                    }
+
+                    //If we caught ourselves hitting the same door again directly without touching the building, just return the previous text which should be the door's
+                    return prevDoorText;
+                }
+                else if (door.doorType == DoorTypes.Building && playerEnterExit.IsPlayerInside)
+                {
+                    // Hit door while inside, transition outside
+                    return playerGPS.CurrentLocation.Name;
+                }
+                else if (door.doorType == DoorTypes.DungeonEntrance && !playerEnterExit.IsPlayerInside)
+                {
+                    // Hit dungeon door while outside, transition inside
+                    //playerEnterExit.TransitionDungeonInterior(doorOwner, door, playerGPS.CurrentLocation, true);
+                    return "Dungeon Entrance";//GameManager.Instance.StreamingWorld.SceneName;
+                }
+                else if (door.doorType == DoorTypes.DungeonExit && playerEnterExit.IsPlayerInside)
+                {
+                    // Hit dungeon exit while inside, ask if access wagon or transition outside
+                    return playerGPS.CurrentLocation.Name;
+                }
+            }
+
+            prevHit = null;
+
+            //Debug.Log(5);
+            return null;
+        }
+
+
+        GameObject goDoor;
+        BoxCollider goDoorCollider;
+        StaticDoor prevDoor;
+        string prevDoorText;
+        /// <summary>
+        /// Check for a door hit in world space.
+        /// </summary>
+        /// <param name="point">Hit point from ray test in world space.</param>
+        /// <param name="doorOut">StaticDoor out if hit found.</param>
+        /// <returns>True if point hits a static door.</returns>
+        public bool HasHit(DaggerfallStaticDoors dfuStaticDoors, Vector3 point, out StaticDoor doorOut)
+        {
+            //Debug.Log("HasHit started");
+            doorOut = new StaticDoor();
+
+            if (dfuStaticDoors.Doors == null)
+                return false;
+
+            var Doors = dfuStaticDoors.Doors;
+
+            // Using a single hidden trigger created when testing door positions
+            // This avoids problems with AABBs as trigger rotates nicely with model transform
+            // A trigger is also more useful for debugging as its drawn by editor
+            if (goDoor == null)
+            {
+                goDoor = new GameObject();
+                goDoor.hideFlags = HideFlags.HideAndDontSave;
+                goDoor.transform.parent = dfuStaticDoors.transform;
+                goDoorCollider = goDoor.AddComponent<BoxCollider>();
+                goDoorCollider.isTrigger = true;
+            }
+
+            BoxCollider c = goDoorCollider;
+            bool found = false;
+
+            if (goDoor && prevHit == goDoor.transform && c.bounds.Contains(point))
+            {
+                //Debug.Log("EARLY FOUND");
+                found = true;
+                doorOut = prevDoor;
+            }
+
+            // Test each door in array
+
+            for (int i = 0; !found && i < Doors.Length; i++)
+            {
+                //Debug.Log("DOORS ITERATE"+i);
+                Quaternion buildingRotation = GameObjectHelper.QuaternionFromMatrix(Doors[i].buildingMatrix);
+                Vector3 doorNormal = buildingRotation * Doors[i].normal;
+                Quaternion facingRotation = Quaternion.LookRotation(doorNormal, Vector3.up);
+
+                // Setup single trigger position and size over each door in turn
+                // This method plays nice with transforms
+                c.size = Doors[i].size;
+                goDoor.transform.parent = dfuStaticDoors.transform;
+                goDoor.transform.position = dfuStaticDoors.transform.rotation * Doors[i].buildingMatrix.MultiplyPoint3x4(Doors[i].centre);
+                goDoor.transform.position += dfuStaticDoors.transform.position;
+                goDoor.transform.rotation = facingRotation;
+
+                // Check if hit was inside trigger
+                if (c.bounds.Contains(point))
+                {
+                    //Debug.Log("HasHit FOUND");
+                    found = true;
+                    doorOut = Doors[i];
+                    if (doorOut.doorType == DoorTypes.DungeonExit)
+                        break;
+                }
+            }
+
+            // Remove temp trigger
+            if (!found && goDoor)
+            {
+                //Debug.Log("DESTROY");
+                GameObject.Destroy(goDoor);
+                goDoor = null;
+                goDoorCollider = null;
+            }
+            else if (found)
+            {
+                prevHit = goDoor.transform;
+                prevDoor = doorOut;
+            }
+
+            return found;
+        }
+
         private bool CheckComponent<T>(RaycastHit hit, out object obj)
         {
             obj = hit.transform.GetComponent<T>();
             return obj != null;
+        }
+
+        // Look for doors on object, then on direct parent
+        private DaggerfallStaticDoors GetDoors(Transform doorsTransform, out Transform owner)
+        {
+            owner = null;
+            DaggerfallStaticDoors doors = doorsTransform.GetComponent<DaggerfallStaticDoors>();
+            if (!doors)
+            {
+                doors = doorsTransform.GetComponentInParent<DaggerfallStaticDoors>();
+                if (doors)
+                    owner = doors.transform;
+            }
+            else
+            {
+                owner = doors.transform;
+            }
+
+            return doors;
+        }
+
+        // Look for building array on object, then on direct parent
+        private DaggerfallStaticBuildings GetBuildings(Transform buildingsTransform, out Transform owner)
+        {
+            owner = null;
+            DaggerfallStaticBuildings buildings = buildingsTransform.GetComponent<DaggerfallStaticBuildings>();
+            if (!buildings)
+            {
+                buildings = buildingsTransform.GetComponentInParent<DaggerfallStaticBuildings>();
+                if (buildings)
+                    owner = buildings.transform;
+            }
+            else
+            {
+                owner = buildings.transform;
+            }
+
+            return buildings;
+        }
+        private bool BuildingIsUnlocked(BuildingSummary buildingSummary)
+        {
+            return (bool)buildingIsUnlockedMethodInfo.Invoke(playerActivate, new object[] { buildingSummary });
+        }
+
+        private int GetBuildingLockValue(BuildingSummary buildingSummary)
+        {
+            return (int)getBuildingLockValueMethodInfo.Invoke(playerActivate, new object[] { buildingSummary });
         }
 
         private void UpdateMouseOffset()
