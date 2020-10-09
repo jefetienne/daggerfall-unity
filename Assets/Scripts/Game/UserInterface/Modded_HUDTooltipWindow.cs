@@ -30,6 +30,8 @@ namespace Modded_Tooltips_Interaction
         GameObject mainCamera;
         int playerLayerMask = 0;
         const float rayDistance = 4;
+        Transform prevHit;
+        string prevText;
 
         Panel nativePanel;
 
@@ -95,63 +97,62 @@ namespace Modded_Tooltips_Interaction
             Scale = nativePanel.LocalScale;
             AutoSize = AutoSizeModes.Scale;
 
-            bool isSame = false;
-            var text = GetHoverText(out isSame);
-
-            if (isSame)
-                Draw(prevText);
-            else if (!string.IsNullOrEmpty(text))
+            var text = GetHoverText();
+            if (!string.IsNullOrEmpty(text))
             {
                 Draw(text);
-                prevText = text;
             }
         }
-
-        Transform prevHit;
-        string prevText;
         
-        private string GetHoverText(out bool isSame)
+        private string GetHoverText()
         {
             Ray ray = new Ray(mainCamera.transform.position, mainCamera.transform.forward);
 
             RaycastHit hit;
             bool hitSomething = Physics.Raycast(ray, out hit, rayDistance, playerLayerMask);
 
-            isSame = hit.transform == prevHit;
+            bool isSame = hit.transform == prevHit;
 
-            if (hitSomething && !isSame)
+            if (hitSomething)
             {
-                object comp;
-                string ret = null;
+                prevHit = hit.transform;
 
-                if (CheckComponent<StaticNPC>(hit, out comp))
+                if (isSame)
                 {
-                    ret = ((StaticNPC)comp).DisplayName;
+                    return prevText;
                 }
-                else if (CheckComponent<MobilePersonNPC>(hit, out comp))
+                else
                 {
-                    ret = ((MobilePersonNPC)comp).NameNPC;
-                }
-                else if (CheckComponent<DaggerfallEntityBehaviour>(hit, out comp))
-                {
-                    ret = ((DaggerfallEntityBehaviour)comp).Entity.Name;
-                }
-                else if (CheckComponent<DaggerfallActionDoor>(hit, out comp))
-                {
-                    var door = (DaggerfallActionDoor)comp;
-                    if (!door.IsLocked)
-                        ret = "Door";
-                    else
-                        ret = "Door\rLock Level: "+door.CurrentLockValue;
-                }
-                /*else if (CheckComponent<DaggerfallActionDoor>(hit, out comp))
-                {
+                    object comp;
+                    string ret = null;
 
-                }*/
+                    if (CheckComponent<StaticNPC>(hit, out comp))
+                    {
+                        ret = ((StaticNPC)comp).DisplayName;
+                    }
+                    else if (CheckComponent<MobilePersonNPC>(hit, out comp))
+                    {
+                        ret = ((MobilePersonNPC)comp).NameNPC;
+                    }
+                    else if (CheckComponent<DaggerfallEntityBehaviour>(hit, out comp))
+                    {
+                        ret = ((DaggerfallEntityBehaviour)comp).Entity.Name;
+                    }
+                    else if (CheckComponent<DaggerfallActionDoor>(hit, out comp))
+                    {
+                        var door = (DaggerfallActionDoor)comp;
+                        if (!door.IsLocked)
+                            ret = "Door";
+                        else
+                            ret = "Door\rLock Level: "+door.CurrentLockValue;
+                    }
+                    /*else if (CheckComponent<DaggerfallActionDoor>(hit, out comp))
+                    {
 
-                if (!string.IsNullOrEmpty(ret))
-                {
-                    prevHit = hit.transform;
+                    }*/
+
+                    prevText = ret;
+
                     return ret;
                 }
             }
