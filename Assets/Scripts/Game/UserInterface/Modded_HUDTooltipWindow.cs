@@ -202,7 +202,10 @@ namespace Modded_Tooltips_Interaction
                     }
                     else if (CheckComponent<DaggerfallEntityBehaviour>(hit, out comp))
                     {
-                        ret = ((DaggerfallEntityBehaviour)comp).Entity.Name;
+                        EnemyMotor enemyMotor = ((DaggerfallEntityBehaviour)comp).transform.GetComponent<EnemyMotor>();
+
+                        if (!enemyMotor || !enemyMotor.IsHostile)
+                            ret = ((DaggerfallEntityBehaviour)comp).Entity.Name;
                     }
                     else if (CheckComponent<DaggerfallActionDoor>(hit, out comp))
                     {
@@ -219,6 +222,10 @@ namespace Modded_Tooltips_Interaction
                     else if (CheckComponent<DaggerfallBookshelf>(hit, out comp))
                     {
                         ret = "Bookshelf";
+                    }
+                    else if (CheckComponent<DaggerfallBulletinBoard>(hit, out comp))
+                    {
+                        ret = "Bulletin Board";
                     }
                     else if (CheckComponent<DaggerfallLoot>(hit, out comp))
                     {
