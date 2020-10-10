@@ -703,8 +703,13 @@ namespace Modded_Tooltips_Interaction
                 // Draw tooltip text
                 for (int i = 0; i < textRows.Length; i++)
                 {
+                    float temp = textPos.x;
+                    var calc = font.CalculateTextWidth(textRows[i], Scale);
+                    textPos.x = (rect.x) + ((rect.width - calc) / 2 * Scale.x) - (rect.width * Scale.x / 3f) + (LeftMargin * Scale.x);
+                    //Debug.Log(rect.x+","+rect.width+","+calc+","+textPos.x);
                     font.DrawText(textRows[i], textPos, Scale, textColor);
                     textPos.y += font.GlyphHeight * Scale.y;
+                    textPos.x = temp;
                 }
 
                 // Lower flag
