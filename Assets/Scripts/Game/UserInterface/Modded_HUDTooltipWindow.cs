@@ -202,6 +202,14 @@ namespace Modded_Tooltips_Interaction
                         else
                             ret = "Door\rLock Level: "+door.CurrentLockValue;
                     }
+                    else if (CheckComponent<DaggerfallLadder>(hit, out comp))
+                    {
+                        ret = "Ladder";
+                    }
+                    else if (CheckComponent<DaggerfallBookshelf>(hit, out comp))
+                    {
+                        ret = "Bookshelf";
+                    }
                     else if (CheckComponent<DaggerfallLoot>(hit, out comp))
                     {
                         var loot = (DaggerfallLoot)comp;
