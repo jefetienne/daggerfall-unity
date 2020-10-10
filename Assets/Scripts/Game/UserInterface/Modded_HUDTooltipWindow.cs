@@ -30,12 +30,18 @@ namespace Modded_Tooltips_Interaction
         #region Fields
 
         #region Raycasting
+        //Use the farthest distance
+        const float rayDistance = PlayerActivate.StaticNPCActivationDistance;
 
         GameObject mainCamera;
         int playerLayerMask = 0;
-        const float rayDistance = 4;
         Transform prevHit;
         string prevText;
+        GameObject goDoor;
+        BoxCollider goDoorCollider;
+        StaticDoor prevDoor;
+        string prevDoorText;
+        float prevDistance;
 
         #endregion
 
@@ -183,7 +189,7 @@ namespace Modded_Tooltips_Interaction
             {
                 prevHit = hit.transform;
 
-                if (isSame)
+                if (isSame && hit.distance <= prevDistance)
                 {
                     return prevText;
                 }
@@ -192,146 +198,181 @@ namespace Modded_Tooltips_Interaction
                     object comp;
                     string ret = null;
 
-                    if (CheckComponent<StaticNPC>(hit, out comp))
+                    if (hit.distance <= PlayerActivate.DefaultActivationDistance)
                     {
-                        ret = ((StaticNPC)comp).DisplayName;
+                        if (CheckComponent<DaggerfallLadder>(hit, out comp))
+                        {
+                            ret = "Ladder";
+                            prevDistance = PlayerActivate.MobileNPCActivationDistance;
+                        }
+                        else if (CheckComponent<DaggerfallBookshelf>(hit, out comp))
+                        {
+                            ret = "Bookshelf";
+                            prevDistance = PlayerActivate.MobileNPCActivationDistance;
+                        }
                     }
-                    else if (CheckComponent<MobilePersonNPC>(hit, out comp))
-                    {
-                        ret = ((MobilePersonNPC)comp).NameNPC;
-                    }
-                    else if (CheckComponent<DaggerfallEntityBehaviour>(hit, out comp))
-                    {
-                        EnemyMotor enemyMotor = ((DaggerfallEntityBehaviour)comp).transform.GetComponent<EnemyMotor>();
 
-                        if (!enemyMotor || !enemyMotor.IsHostile)
-                            ret = ((DaggerfallEntityBehaviour)comp).Entity.Name;
-                    }
-                    else if (CheckComponent<DaggerfallActionDoor>(hit, out comp))
+                    if (string.IsNullOrEmpty(ret) && hit.distance <= PlayerActivate.MobileNPCActivationDistance)
                     {
-                        var door = (DaggerfallActionDoor)comp;
-                        if (!door.IsLocked)
-                            ret = "Door";
-                        else
-                            ret = "Door\rLock Level: "+door.CurrentLockValue;
+                        if (CheckComponent<MobilePersonNPC>(hit, out comp))
+                        {
+                            ret = ((MobilePersonNPC)comp).NameNPC;
+                            prevDistance = PlayerActivate.MobileNPCActivationDistance;
+                        }
+                        else if (CheckComponent<DaggerfallEntityBehaviour>(hit, out comp))
+                        {
+                            EnemyMotor enemyMotor = ((DaggerfallEntityBehaviour)comp).transform.GetComponent<EnemyMotor>();
+
+                            if (!enemyMotor || !enemyMotor.IsHostile)
+                            {
+                                ret = ((DaggerfallEntityBehaviour)comp).Entity.Name;
+                                prevDistance = PlayerActivate.MobileNPCActivationDistance;
+                            }
+
+                        }
+                        else if (CheckComponent<DaggerfallBulletinBoard>(hit, out comp))
+                        {
+                            ret = "Bulletin Board";
+                            prevDistance = PlayerActivate.MobileNPCActivationDistance;
+                        }
                     }
-                    else if (CheckComponent<DaggerfallLadder>(hit, out comp))
+
+                    if (string.IsNullOrEmpty(ret) && hit.distance <= PlayerActivate.StaticNPCActivationDistance)
                     {
-                        ret = "Ladder";
+                        if (CheckComponent<StaticNPC>(hit, out comp))
+                        {
+                            ret = ((StaticNPC)comp).DisplayName;
+                            prevDistance = PlayerActivate.StaticNPCActivationDistance;
+                        }
                     }
-                    else if (CheckComponent<DaggerfallBookshelf>(hit, out comp))
-                    {
-                        ret = "Bookshelf";
-                    }
-                    else if (CheckComponent<DaggerfallBulletinBoard>(hit, out comp))
-                    {
-                        ret = "Bulletin Board";
-                    }
-                    else if (CheckComponent<DaggerfallLoot>(hit, out comp))
+
+                    if (string.IsNullOrEmpty(ret) && CheckComponent<DaggerfallLoot>(hit, out comp))
                     {
                         var loot = (DaggerfallLoot)comp;
 
-                        switch (loot.ContainerType)
+                        if (loot.ContainerType == LootContainerTypes.CorpseMarker && hit.distance <= PlayerActivate.CorpseActivationDistance)
                         {
-                            case LootContainerTypes.DroppedLoot:
-                            case LootContainerTypes.RandomTreasure:
-                                if (loot.Items.Count == 1)
-                                {
-                                    var item = loot.Items.GetItem(0);
-                                    ret = item.LongName;
+                            ret = loot.entityName + " (dead)";
+                            prevDistance = PlayerActivate.CorpseActivationDistance;
+                        }
+                        else if (hit.distance <= PlayerActivate.TreasureActivationDistance)
+                        {
+                            prevDistance = PlayerActivate.TreasureActivationDistance;
+                            switch (loot.ContainerType)
+                            {
+                                case LootContainerTypes.DroppedLoot:
+                                case LootContainerTypes.RandomTreasure:
+                                    if (loot.Items.Count == 1)
+                                    {
+                                        var item = loot.Items.GetItem(0);
+                                        ret = item.LongName;
 
-                                    if (item.stackCount > 1)
-                                        ret += " (" + item.stackCount + ")";
-                                }
-                                else
-                                {
-                                    ret = "Loot Pile";
-                                }
-                                break;
-                            case LootContainerTypes.CorpseMarker:
-                                ret = loot.entityName + " (dead)";
-                                break;
-                            case LootContainerTypes.ShopShelves:
-                                ret = "Shop Shelf";
-                                break;
-                            case LootContainerTypes.HouseContainers:
-                                var name = hit.transform.GetComponent<MeshFilter>().mesh.name.Split(' ')[0];
-                                var record = Convert.ToInt32(name);
-                                switch (record)
-                                {
-                                    case 41003:
-                                    case 41800:
-                                    case 41803:
-                                        ret = "Wardrobe";
-                                        break;
-                                    case 41004:
-                                    case 41007:
-                                    case 41008:
-                                    case 41033:
-                                    case 41038:
-                                    case 41801:
-                                    case 41805:
-                                    case 41810:
-                                    case 41802:
-                                        ret = "Cabinets";
-                                        break;
-                                    case 41027:
-                                        ret = "Shelf";
-                                        break;
-                                    case 41032:
-                                    case 41034:
-                                    case 41050:
-                                    case 41806:
-                                        ret = "Dresser";
-                                        break;
-                                    case 41035:
-                                    case 41037:
-                                    case 41051:
-                                    case 41807:
-                                    case 41804:
-                                    case 41808:
-                                    case 41809:
-                                    case 41814:
-                                        ret = "Cupboard";
-                                        break;
-                                    case 41815:
-                                    case 41816:
-                                    case 41817:
-                                    case 41818:
-                                    case 41819:
-                                    case 41820:
-                                    case 41821:
-                                    case 41822:
-                                    case 41823:
-                                    case 41824:
-                                    case 41825:
-                                    case 41826:
-                                    case 41827:
-                                    case 41828:
-                                    case 41829:
-                                    case 41830:
-                                    case 41831:
-                                    case 41832:
-                                    case 41833:
-                                    case 41834:
-                                        ret = "Crate";
-                                        break;
-                                    case 41811:
-                                    case 41812:
-                                    case 41813:
-                                        ret = "Chest";
-                                        break;
-                                }
-                                break;
+                                        if (item.stackCount > 1)
+                                            ret += " (" + item.stackCount + ")";
+                                    }
+                                    else
+                                    {
+                                        ret = "Loot Pile";
+                                    }
+                                    break;
+                                case LootContainerTypes.ShopShelves:
+                                    ret = "Shop Shelf";
+                                    break;
+                                case LootContainerTypes.HouseContainers:
+                                    var name = hit.transform.GetComponent<MeshFilter>().mesh.name.Split(' ')[0];
+                                    var record = Convert.ToInt32(name);
+                                    switch (record)
+                                    {
+                                        case 41003:
+                                        case 41800:
+                                        case 41803:
+                                            ret = "Wardrobe";
+                                            break;
+                                        case 41004:
+                                        case 41007:
+                                        case 41008:
+                                        case 41033:
+                                        case 41038:
+                                        case 41801:
+                                        case 41805:
+                                        case 41810:
+                                        case 41802:
+                                            ret = "Cabinets";
+                                            break;
+                                        case 41027:
+                                            ret = "Shelf";
+                                            break;
+                                        case 41032:
+                                        case 41034:
+                                        case 41050:
+                                        case 41806:
+                                            ret = "Dresser";
+                                            break;
+                                        case 41035:
+                                        case 41037:
+                                        case 41051:
+                                        case 41807:
+                                        case 41804:
+                                        case 41808:
+                                        case 41809:
+                                        case 41814:
+                                            ret = "Cupboard";
+                                            break;
+                                        case 41815:
+                                        case 41816:
+                                        case 41817:
+                                        case 41818:
+                                        case 41819:
+                                        case 41820:
+                                        case 41821:
+                                        case 41822:
+                                        case 41823:
+                                        case 41824:
+                                        case 41825:
+                                        case 41826:
+                                        case 41827:
+                                        case 41828:
+                                        case 41829:
+                                        case 41830:
+                                        case 41831:
+                                        case 41832:
+                                        case 41833:
+                                        case 41834:
+                                            ret = "Crate";
+                                            break;
+                                        case 41811:
+                                        case 41812:
+                                        case 41813:
+                                            ret = "Chest";
+                                            break;
+                                    }
+                                    break;
+                            }
                         }
                     }
-                    else
+
+                    if (string.IsNullOrEmpty(ret) && hit.distance <= PlayerActivate.DoorActivationDistance)
+                    {
+                        if (CheckComponent<DaggerfallActionDoor>(hit, out comp))
+                        {
+                            var door = (DaggerfallActionDoor)comp;
+                            if (!door.IsLocked)
+                                ret = "Door";
+                            else
+                                ret = "Door\rLock Level: "+door.CurrentLockValue;
+
+                            prevDistance = PlayerActivate.DoorActivationDistance;
+                        }
+                    }
+
+                    if (string.IsNullOrEmpty(ret))
                     {
                         Transform doorOwner;
                         DaggerfallStaticDoors doors = GetDoors(hit.transform, out doorOwner);
                         if (doors)
                         {
                             ret = GetStaticDoorText(doors, hit, doorOwner);
+                            prevDistance = PlayerActivate.DoorActivationDistance;
                         }
                     }
 
@@ -348,10 +389,10 @@ namespace Modded_Tooltips_Interaction
         {
             StaticDoor door;
 
-            var hashit = HasHit(doors, hit.point, out door); //doors.HasHit(hit.point, out door);
             //Debug.Log("GETSTATICDOORTEXT"+hashit);
 
-            if (hashit || CustomDoor.HasHit(hit, out door))
+            if (hit.distance <= PlayerActivate.DoorActivationDistance
+                && (HasHit(doors, hit.point, out door) || CustomDoor.HasHit(hit, out door)))
             {
                 if (door.doorType == DoorTypes.Building && !playerEnterExit.IsPlayerInside)
                 {
@@ -440,11 +481,6 @@ namespace Modded_Tooltips_Interaction
             return null;
         }
 
-
-        GameObject goDoor;
-        BoxCollider goDoorCollider;
-        StaticDoor prevDoor;
-        string prevDoorText;
         /// <summary>
         /// Check for a door hit in world space.
         /// </summary>
