@@ -397,7 +397,6 @@ namespace Modded_Tooltips_Interaction
                 if (door.doorType == DoorTypes.Building && !playerEnterExit.IsPlayerInside)
                 {
                     // Check for a static building hit
-                    bool hitBuilding;
                     StaticBuilding building;
                     DFLocation.BuildingTypes buildingType;
                     bool buildingUnlocked;
@@ -407,8 +406,6 @@ namespace Modded_Tooltips_Interaction
                     DaggerfallStaticBuildings buildings = GetBuildings(hit.transform, out buildingOwner);
                     if (buildings && buildings.HasHit(hit.point, out building))
                     {
-                        hitBuilding = true;
-
                         // Get building directory for location
                         BuildingDirectory buildingDirectory = GameManager.Instance.StreamingWorld.GetCurrentBuildingDirectory();
                         if (!buildingDirectory)
@@ -434,7 +431,7 @@ namespace Modded_Tooltips_Interaction
                             string tooltip = "To\r" + db.displayName;
 
                             if (!buildingUnlocked && buildingLockValue > 0)
-                                tooltip += "\r" + "Lock Level: " + buildingLockValue;
+                                tooltip += "\rLock Level: " + buildingLockValue;
 
                             if (!buildingUnlocked && buildingType < DFLocation.BuildingTypes.Temple
                                 && buildingType != DFLocation.BuildingTypes.HouseForSale)
@@ -465,13 +462,17 @@ namespace Modded_Tooltips_Interaction
                 else if (door.doorType == DoorTypes.DungeonEntrance && !playerEnterExit.IsPlayerInside)
                 {
                     // Hit dungeon door while outside, transition inside
-                    //playerEnterExit.TransitionDungeonInterior(doorOwner, door, playerGPS.CurrentLocation, true);
-                    return "To\r" + playerGPS.CurrentLocation.Name;//GameManager.Instance.StreamingWorld.SceneName;
+                    return "To\r" + playerGPS.CurrentLocation.Name;
                 }
                 else if (door.doorType == DoorTypes.DungeonExit && playerEnterExit.IsPlayerInside)
                 {
                     // Hit dungeon exit while inside, ask if access wagon or transition outside
-                    return "To\r" + playerGPS.CurrentRegion.Name;
+                    if (playerGPS.CurrentLocationType == DFRegion.LocationTypes.TownCity
+                        || playerGPS.CurrentLocationType == DFRegion.LocationTypes.TownHamlet
+                        || playerGPS.CurrentLocationType == DFRegion.LocationTypes.TownVillage)
+                        return "To\r" + playerGPS.CurrentLocation.Name;
+                    else
+                        return "To\r" + playerGPS.CurrentRegion.Name + " Region";
                 }
             }
 
