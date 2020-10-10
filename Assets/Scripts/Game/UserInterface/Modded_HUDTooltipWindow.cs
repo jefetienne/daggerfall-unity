@@ -145,6 +145,16 @@ namespace Modded_Tooltips_Interaction
         public override void Update()
         {
             base.Update();
+
+            // Weird bug occurs when the player is clicking on a static door from a distance because the activation creates another "goDoor"
+            // which overlaps and prevents the player from going in. So we must delete the tooltip's goDoor beforehand if the player is activating
+            if (InputManager.Instance.ActionComplete(InputManager.Actions.ActivateCenterObject))
+            {
+                GameObject.Destroy(goDoor);
+                goDoor = null;
+                goDoorCollider = null;
+            }
+
             if (Display.main.systemHeight != currentSystemHeight ||
                 Display.main.renderingHeight != currentRenderingHeight || 
                 DaggerfallUnity.Settings.Fullscreen != currentFullScreen)
@@ -373,7 +383,7 @@ namespace Modded_Tooltips_Interaction
                         if (playerGPS.GetDiscoveredBuilding(building.buildingKey, out db))
                         {
                             // Check against quest system for an overriding quest-assigned display name for this building
-                            string tooltip = db.displayName;
+                            string tooltip = "To\r" + db.displayName;
 
                             if (!buildingUnlocked && buildingLockValue > 0)
                                 tooltip += "\r" + "Lock Level: " + buildingLockValue;
@@ -402,18 +412,18 @@ namespace Modded_Tooltips_Interaction
                 else if (door.doorType == DoorTypes.Building && playerEnterExit.IsPlayerInside)
                 {
                     // Hit door while inside, transition outside
-                    return playerGPS.CurrentLocation.Name;
+                    return "To\r" + playerGPS.CurrentLocation.Name;
                 }
                 else if (door.doorType == DoorTypes.DungeonEntrance && !playerEnterExit.IsPlayerInside)
                 {
                     // Hit dungeon door while outside, transition inside
                     //playerEnterExit.TransitionDungeonInterior(doorOwner, door, playerGPS.CurrentLocation, true);
-                    return "Dungeon Entrance";//GameManager.Instance.StreamingWorld.SceneName;
+                    return "To\r" + playerGPS.CurrentLocation.Name;//GameManager.Instance.StreamingWorld.SceneName;
                 }
                 else if (door.doorType == DoorTypes.DungeonExit && playerEnterExit.IsPlayerInside)
                 {
                     // Hit dungeon exit while inside, ask if access wagon or transition outside
-                    return playerGPS.CurrentLocation.Name;
+                    return "To\r" + playerGPS.CurrentRegion.Name;
                 }
             }
 
