@@ -202,6 +202,104 @@ namespace Modded_Tooltips_Interaction
                         else
                             ret = "Door\rLock Level: "+door.CurrentLockValue;
                     }
+                    else if (CheckComponent<DaggerfallLoot>(hit, out comp))
+                    {
+                        var loot = (DaggerfallLoot)comp;
+
+                        switch (loot.ContainerType)
+                        {
+                            case LootContainerTypes.DroppedLoot:
+                            case LootContainerTypes.RandomTreasure:
+                                if (loot.Items.Count == 1)
+                                {
+                                    var item = loot.Items.GetItem(0);
+                                    ret = item.LongName;
+
+                                    if (item.stackCount > 1)
+                                        ret += " (" + item.stackCount + ")";
+                                }
+                                else
+                                {
+                                    ret = "Loot Pile";
+                                }
+                                break;
+                            case LootContainerTypes.CorpseMarker:
+                                ret = loot.entityName + " (dead)";
+                                break;
+                            case LootContainerTypes.ShopShelves:
+                                ret = "Shop Shelf";
+                                break;
+                            case LootContainerTypes.HouseContainers:
+                                var name = hit.transform.GetComponent<MeshFilter>().mesh.name.Split(' ')[0];
+                                var record = Convert.ToInt32(name);
+                                switch (record)
+                                {
+                                    case 41003:
+                                    case 41800:
+                                    case 41803:
+                                        ret = "Wardrobe";
+                                        break;
+                                    case 41004:
+                                    case 41007:
+                                    case 41008:
+                                    case 41033:
+                                    case 41038:
+                                    case 41801:
+                                    case 41805:
+                                    case 41810:
+                                    case 41802:
+                                        ret = "Cabinets";
+                                        break;
+                                    case 41027:
+                                        ret = "Shelf";
+                                        break;
+                                    case 41032:
+                                    case 41034:
+                                    case 41050:
+                                    case 41806:
+                                        ret = "Dresser";
+                                        break;
+                                    case 41035:
+                                    case 41037:
+                                    case 41051:
+                                    case 41807:
+                                    case 41804:
+                                    case 41808:
+                                    case 41809:
+                                    case 41814:
+                                        ret = "Cupboard";
+                                        break;
+                                    case 41815:
+                                    case 41816:
+                                    case 41817:
+                                    case 41818:
+                                    case 41819:
+                                    case 41820:
+                                    case 41821:
+                                    case 41822:
+                                    case 41823:
+                                    case 41824:
+                                    case 41825:
+                                    case 41826:
+                                    case 41827:
+                                    case 41828:
+                                    case 41829:
+                                    case 41830:
+                                    case 41831:
+                                    case 41832:
+                                    case 41833:
+                                    case 41834:
+                                        ret = "Crate";
+                                        break;
+                                    case 41811:
+                                    case 41812:
+                                    case 41813:
+                                        ret = "Chest";
+                                        break;
+                                }
+                                break;
+                        }
+                    }
                     else
                     {
                         Transform doorOwner;
