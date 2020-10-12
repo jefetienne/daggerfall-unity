@@ -65,9 +65,7 @@ namespace Modded_Tooltips_Interaction
         const int defaultMarginSize = 2;
 
         DaggerfallFont font;
-        float toolTipDelay = 0;
         Vector2 mouseOffset = new Vector2(0, 4);
-        private int currentCursorHeight = -1;
         private int currentSystemHeight;
         private int currentRenderingHeight;
         private bool currentFullScreen;
@@ -200,15 +198,23 @@ namespace Modded_Tooltips_Interaction
 
                     if (hit.distance <= PlayerActivate.DefaultActivationDistance)
                     {
-                        if (CheckComponent<DaggerfallLadder>(hit, out comp))
+                        if (CheckComponent<DaggerfallAction>(hit, out comp))
+                        {
+                            if (((DaggerfallAction)comp).TriggerFlag == DFBlock.RdbTriggerFlags.Direct)
+                            {
+                                ret = "<Interact>";
+                                prevDistance = PlayerActivate.DefaultActivationDistance;
+                            }
+                        }
+                        else if (CheckComponent<DaggerfallLadder>(hit, out comp))
                         {
                             ret = "Ladder";
-                            prevDistance = PlayerActivate.MobileNPCActivationDistance;
+                            prevDistance = PlayerActivate.DefaultActivationDistance;
                         }
                         else if (CheckComponent<DaggerfallBookshelf>(hit, out comp))
                         {
                             ret = "Bookshelf";
-                            prevDistance = PlayerActivate.MobileNPCActivationDistance;
+                            prevDistance = PlayerActivate.DefaultActivationDistance;
                         }
                     }
 
@@ -705,7 +711,7 @@ namespace Modded_Tooltips_Interaction
                 {
                     float temp = textPos.x;
                     var calc = font.CalculateTextWidth(textRows[i], Scale);
-                    textPos.x = (rect.x) + ((rect.width - calc) / 2 * Scale.x) - (rect.width * Scale.x / 3f) + (LeftMargin * Scale.x);
+                    textPos.x = (rect.x) + ((rect.width - calc) / 2 * Scale.x) - (rect.width * Scale.x / 3f) - (LeftMargin / 2 * Scale.x);
                     //Debug.Log(rect.x+","+rect.width+","+calc+","+textPos.x);
                     font.DrawText(textRows[i], textPos, Scale, textColor);
                     textPos.y += font.GlyphHeight * Scale.y;
