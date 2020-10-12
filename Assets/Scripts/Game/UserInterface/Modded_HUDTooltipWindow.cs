@@ -202,7 +202,19 @@ namespace Modded_Tooltips_Interaction
                         {
                             if (((DaggerfallAction)comp).TriggerFlag == DFBlock.RdbTriggerFlags.Direct)
                             {
-                                ret = "<Interact>";
+                                var name = hit.transform.GetComponent<MeshFilter>().mesh.name.Split(' ')[0];
+                                var record = Convert.ToInt32(name);
+                                switch (record)
+                                {
+                                    case 61027:
+                                    case 61028:
+                                        ret = "Lever";
+                                        break;
+                                    default:
+                                        ret = "<Interact>";
+                                        break;
+                                }
+
                                 prevDistance = PlayerActivate.DefaultActivationDistance;
                             }
                         }
