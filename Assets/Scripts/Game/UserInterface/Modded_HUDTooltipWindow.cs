@@ -270,10 +270,14 @@ namespace Modded_Tooltips_Interaction
 
                                 prevDistance = PlayerActivate.DefaultActivationDistance;
                             }
-                        } else if (CheckComponent<DaggerfallLadder>(hit, out comp)) {
+                        }
+                        else if (CheckComponent<DaggerfallLadder>(hit, out comp))
+                        {
                             ret = "Ladder";
                             prevDistance = PlayerActivate.DefaultActivationDistance;
-                        } else if (CheckComponent<DaggerfallBookshelf>(hit, out comp)) {
+                        }
+                        else if (CheckComponent<DaggerfallBookshelf>(hit, out comp))
+                        {
                             ret = "Bookshelf";
                             prevDistance = PlayerActivate.DefaultActivationDistance;
                         }
@@ -423,7 +427,6 @@ namespace Modded_Tooltips_Interaction
             StaticDoor door;
 
             //Debug.Log("GETSTATICDOORTEXT"+hashit);
-
             if (hit.distance <= PlayerActivate.DoorActivationDistance
                 && (HasHit(doors, hit.point, out door) || CustomDoor.HasHit(hit, out door)))
             {
