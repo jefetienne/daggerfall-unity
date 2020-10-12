@@ -35,13 +35,20 @@ namespace Modded_Tooltips_Interaction
 
         GameObject mainCamera;
         int playerLayerMask = 0;
+
+        //Caching
         Transform prevHit;
         string prevText;
+
         GameObject goDoor;
         BoxCollider goDoorCollider;
         StaticDoor prevDoor;
         string prevDoorText;
         float prevDistance;
+
+        Transform prevDoorCheckTransform;
+        Transform prevDoorOwner;
+        DaggerfallStaticDoors prevStaticDoors;
 
         #endregion
 
@@ -187,48 +194,20 @@ namespace Modded_Tooltips_Interaction
             {
                 prevHit = hit.transform;
 
-                if (isSame && hit.distance <= prevDistance)
+                if (isSame)
                 {
-                    return prevText;
+                    if (hit.distance <= prevDistance)
+                        return prevText;
+                    else
+                        return null;
                 }
                 else
                 {
                     object comp;
                     string ret = null;
 
-                    if (hit.distance <= PlayerActivate.DefaultActivationDistance)
-                    {
-                        if (CheckComponent<DaggerfallAction>(hit, out comp))
-                        {
-                            if (((DaggerfallAction)comp).TriggerFlag == DFBlock.RdbTriggerFlags.Direct)
-                            {
-                                var name = hit.transform.GetComponent<MeshFilter>().mesh.name.Split(' ')[0];
-                                var record = Convert.ToInt32(name);
-                                switch (record)
-                                {
-                                    case 61027:
-                                    case 61028:
-                                        ret = "Lever";
-                                        break;
-                                    default:
-                                        ret = "<Interact>";
-                                        break;
-                                }
-
-                                prevDistance = PlayerActivate.DefaultActivationDistance;
-                            }
-                        }
-                        else if (CheckComponent<DaggerfallLadder>(hit, out comp))
-                        {
-                            ret = "Ladder";
-                            prevDistance = PlayerActivate.DefaultActivationDistance;
-                        }
-                        else if (CheckComponent<DaggerfallBookshelf>(hit, out comp))
-                        {
-                            ret = "Bookshelf";
-                            prevDistance = PlayerActivate.DefaultActivationDistance;
-                        }
-                    }
+                    if (hit.transform.name.Length > 16 && hit.transform.name.Substring(0, 16) == "DaggerfallTerrain")
+                        return null;
 
                     if (string.IsNullOrEmpty(ret) && hit.distance <= PlayerActivate.MobileNPCActivationDistance)
                     {
@@ -261,6 +240,42 @@ namespace Modded_Tooltips_Interaction
                         {
                             ret = ((StaticNPC)comp).DisplayName;
                             prevDistance = PlayerActivate.StaticNPCActivationDistance;
+                        }
+                    }
+
+                    if (hit.distance <= PlayerActivate.DefaultActivationDistance)
+                    {
+                        if (CheckComponent<DaggerfallAction>(hit, out comp))
+                        {
+                            if (((DaggerfallAction)comp).TriggerFlag == DFBlock.RdbTriggerFlags.Direct)
+                            {
+                                var mesh = hit.transform.GetComponent<MeshFilter>();
+                                if (mesh)
+                                {
+                                    int record;
+                                    if (int.TryParse(mesh.name.Split(' ')[0], out record))
+                                    {
+                                        switch (record)
+                                        {
+                                            case 61027:
+                                            case 61028:
+                                                ret = "Lever";
+                                                break;
+                                        }
+                                    }
+                                }
+
+                                if (string.IsNullOrEmpty(ret))
+                                    ret = "<Interact>";
+
+                                prevDistance = PlayerActivate.DefaultActivationDistance;
+                            }
+                        } else if (CheckComponent<DaggerfallLadder>(hit, out comp)) {
+                            ret = "Ladder";
+                            prevDistance = PlayerActivate.DefaultActivationDistance;
+                        } else if (CheckComponent<DaggerfallBookshelf>(hit, out comp)) {
+                            ret = "Bookshelf";
+                            prevDistance = PlayerActivate.DefaultActivationDistance;
                         }
                     }
 
@@ -593,6 +608,13 @@ namespace Modded_Tooltips_Interaction
         private DaggerfallStaticDoors GetDoors(Transform doorsTransform, out Transform owner)
         {
             owner = null;
+
+            if (doorsTransform == prevDoorCheckTransform)
+            {
+                owner = prevDoorOwner;
+                return prevStaticDoors;
+            }
+
             DaggerfallStaticDoors doors = doorsTransform.GetComponent<DaggerfallStaticDoors>();
             if (!doors)
             {
@@ -604,6 +626,10 @@ namespace Modded_Tooltips_Interaction
             {
                 owner = doors.transform;
             }
+
+            prevDoorCheckTransform = doorsTransform;
+            prevStaticDoors = doors;
+            prevDoorOwner = owner;
 
             return doors;
         }
