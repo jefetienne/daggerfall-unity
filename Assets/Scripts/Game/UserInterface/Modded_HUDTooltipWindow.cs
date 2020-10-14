@@ -306,16 +306,15 @@ namespace Modded_Tooltips_Interaction
                                     switch (record)
                                     {
                                         case 41003:
+                                        case 41004:
                                         case 41800:
-                                        case 41803:
+                                        case 41801:
                                             ret = "Wardrobe";
                                             break;
-                                        case 41004:
                                         case 41007:
                                         case 41008:
                                         case 41033:
                                         case 41038:
-                                        case 41801:
                                         case 41805:
                                         case 41810:
                                         case 41802:
@@ -324,12 +323,13 @@ namespace Modded_Tooltips_Interaction
                                         case 41027:
                                             ret = "Shelf";
                                             break;
-                                        case 41032:
                                         case 41034:
                                         case 41050:
+                                        case 41803:
                                         case 41806:
                                             ret = "Dresser";
                                             break;
+                                        case 41032:
                                         case 41035:
                                         case 41037:
                                         case 41051:
@@ -448,11 +448,20 @@ namespace Modded_Tooltips_Interaction
                         PlayerGPS.DiscoveredBuilding db;
                         if (playerGPS.GetDiscoveredBuilding(building.buildingKey, out db))
                         {
-                            // Check against quest system for an overriding quest-assigned display name for this building
-                            string tooltip = "To\r" + db.displayName;
+                            string tooltip;
+                            if (buildingType != DFLocation.BuildingTypes.Town23)
+                            {
+                                tooltip = "To\r" + db.displayName;
+                            }
+                            else
+                            {
+                                tooltip = "To\r" + playerGPS.CurrentLocation.Name + " City Walls";
+                            }
 
-                            if (!buildingUnlocked && buildingLockValue > 0)
+                            if (!buildingUnlocked)
+                            {
                                 tooltip += "\rLock Level: " + buildingLockValue;
+                            }
 
                             if (!buildingUnlocked && buildingType < DFLocation.BuildingTypes.Temple
                                 && buildingType != DFLocation.BuildingTypes.HouseForSale)
