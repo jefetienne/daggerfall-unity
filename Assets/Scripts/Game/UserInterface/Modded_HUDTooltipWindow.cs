@@ -24,7 +24,7 @@ using DaggerfallWorkshop.Utility.AssetInjection;
 
 namespace Modded_Tooltips_Interaction
 {
-    public class Modded_HUDTooltipWindow : BaseScreenComponent
+    public class Modded_HUDTooltipWindow : Panel
     {
 
         #region Fields
@@ -55,7 +55,7 @@ namespace Modded_Tooltips_Interaction
         PlayerEnterExit playerEnterExit;
         PlayerGPS playerGPS;
         PlayerActivate playerActivate;
-
+        HUDTooltip tooltip;
         #region Stolen methods/variables/properties
 
         byte[] openHours;
@@ -67,47 +67,27 @@ namespace Modded_Tooltips_Interaction
 
         #endregion
 
-        #region Tooltip
-
-        const int defaultMarginSize = 2;
-
-        DaggerfallFont font;
-        Vector2 mouseOffset = new Vector2(0, 4);
-        private int currentSystemHeight;
-        private int currentRenderingHeight;
-        private bool currentFullScreen;
-
-        bool drawToolTip = false;
-        Color textColor = DaggerfallUI.DaggerfallUnityDefaultToolTipTextColor;
-
-        string[] textRows;
-        float widestRow = 0;
-        string lastText = string.Empty;
-        bool previousSDFState;
-
-        #endregion
-
         #endregion
 
         [Invoke(StateManager.StateTypes.Game)]
         public static void InitAtGameState(InitParams initParams)
         {
             Debug.Log("****************************tooltips2");
-            var tooltip = new Modded_HUDTooltipWindow();
+            var ttw = new Modded_HUDTooltipWindow();
 
-            DaggerfallUI.Instance.DaggerfallHUD.ParentPanel.Components.Add(tooltip);
-            
+            Type type = DaggerfallUI.Instance.DaggerfallHUD.GetType();
+            var prop = type.BaseType.GetProperty(
+                "NativePanel",
+                BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+            var nativePanel = (Panel)prop.GetValue(DaggerfallUI.Instance.DaggerfallHUD);
+
+            nativePanel.Components.Add(ttw);
         }
 
         #region Constructors
 
         public Modded_HUDTooltipWindow()
         {
-            // Tooltip
-            font = DaggerfallUI.DefaultFont;
-            BackgroundColor = DaggerfallUI.DaggerfallUnityDefaultToolTipBackgroundColor;
-            SetMargins(Margins.All, defaultMarginSize);
-
             // Raycasting
             mainCamera = GameObject.FindGameObjectWithTag("MainCamera");
             playerLayerMask = ~(1 << LayerMask.NameToLayer("Player"));
@@ -147,11 +127,20 @@ namespace Modded_Tooltips_Interaction
                 "closeHours",
                 BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static)
                 .GetValue(playerActivate);
+
+            tooltip = new HUDTooltip();
+            tooltip.Parent = this;
+            this.Components.Add(tooltip);
         }
 
         #endregion
 
         #region Public Methods
+
+        public override void Draw() {
+            base.Draw();
+            tooltip.Draw();
+        }
 
         public override void Update()
         {
@@ -165,19 +154,15 @@ namespace Modded_Tooltips_Interaction
                 goDoor = null;
                 goDoorCollider = null;
             }
-
-            if (Display.main.systemHeight != currentSystemHeight ||
-                Display.main.renderingHeight != currentRenderingHeight || 
-                DaggerfallUnity.Settings.Fullscreen != currentFullScreen)
-                UpdateMouseOffset();
             
-            Scale = nativePanel.LocalScale;
-            AutoSize = AutoSizeModes.Scale;
+            //Scale = nativePanel.LocalScale;
+            Size = nativePanel.Size;
+            AutoSize = AutoSizeModes.None;
 
             var text = GetHoverText();
             if (!string.IsNullOrEmpty(text))
             {
-                Draw(text);
+                tooltip.Draw(text);
             }
         }
         
@@ -665,133 +650,195 @@ namespace Modded_Tooltips_Interaction
             return (int)getBuildingLockValueMethodInfo.Invoke(playerActivate, new object[] { buildingSummary });
         }
 
-        private void UpdateMouseOffset()
+        public class HUDTooltip : BaseScreenComponent
         {
-            currentSystemHeight = Display.main.systemHeight;
-            currentRenderingHeight = Display.main.renderingHeight;
-            currentFullScreen = DaggerfallUnity.Settings.Fullscreen;
-            mouseOffset = new Vector2(0, 0/*currentCursorHeight * 200f*/ / (currentFullScreen ? currentSystemHeight : currentRenderingHeight));
-        }
+            #region Fields
 
-        /// <summary>
-        /// Flags tooltip to be drawn at end of UI update.
-        /// </summary>
-        /// <param name="text">Text to render inside tooltip.</param>
-        public void Draw(string text)
-        {
-            // Validate
-            if (font == null || string.IsNullOrEmpty(text))
+            const int defaultMarginSize = 2;
+
+            DaggerfallFont font;
+            private int currentCursorHeight = -1;
+            private int currentSystemHeight;
+            private int currentRenderingHeight;
+            private bool currentFullScreen;
+
+            bool drawToolTip = false;
+            string[] textRows;
+            float widestRow = 0;
+            string lastText = string.Empty;
+            bool previousSDFState;
+
+            #endregion
+
+            #region Properties
+
+            /// <summary>
+            /// Gets or sets font used inside tooltip.
+            /// </summary>
+            public DaggerfallFont Font
             {
-                drawToolTip = false;
-                return;
+                get { return font; }
+                set { font = value; }
             }
 
-            // Update text rows
-            UpdateTextRows(text);
-            if (textRows == null || textRows.Length == 0)
+			/// <summary>
+			/// Sets delay time in seconds before tooltip is displayed.
+			/// </summary>
+			public float ToolTipDelay { get; set; } = 0;
+
+            /// <summary>
+            /// Gets or sets tooltip draw position relative to mouse.
+            /// </summary>
+            public Vector2 MouseOffset { get; set; } = new Vector2(0, 4);
+
+			/// <summary>
+			/// Gets or sets tooltip text colour.
+			/// </summary>
+			public Color TextColor { get; set; } = DaggerfallUI.DaggerfallUnityDefaultToolTipTextColor;
+
+            #endregion
+
+            #region Constructors
+
+            public HUDTooltip()
             {
-                drawToolTip = false;
-                return;
+                font = DaggerfallUI.DefaultFont;
+                BackgroundColor = DaggerfallUI.DaggerfallUnityDefaultToolTipBackgroundColor;
+                SetMargins(Margins.All, defaultMarginSize);
             }
 
-            // Set tooltip size
-            Size = new Vector2(
-                (widestRow + LeftMargin + RightMargin),
-                (font.GlyphHeight * textRows.Length + TopMargin + BottomMargin - 1));
+            #endregion
 
-            // Set tooltip position
-            Position = new Vector2(Screen.width / 2, currentFullScreen ? currentSystemHeight / 2 : currentRenderingHeight / 2) + mouseOffset;
+            #region Public Methods
 
-            // Ensure tooltip inside screen area
-            Rect rect = Rectangle;
-            if (rect.xMax > Screen.width)
+            public override void Update()
             {
-                float difference = (rect.xMax - Screen.width) * 1f / Scale.x;
-                Vector2 newPosition = new Vector2(Position.x - difference, Position.y);
-                Position = newPosition;
-            }
-            if (rect.yMax > Screen.height)
-            {
-                float difference = (rect.yMax - Screen.height) * 1f / Scale.y;
-                Vector2 newPosition = new Vector2(Position.x, Position.y - difference);
-                Position = newPosition;
+                base.Update();
+                if (DaggerfallUnity.Settings.CursorHeight != currentCursorHeight ||
+                    Display.main.systemHeight != currentSystemHeight ||
+                    Display.main.renderingHeight != currentRenderingHeight ||
+                    DaggerfallUnity.Settings.Fullscreen != currentFullScreen)
+                    UpdateMouseOffset();
             }
 
-            // Check if mouse position is in parent's rectangle (to prevent tooltips out of panel's rectangle to be displayed)
-            if (1 == 1)
+            private void UpdateMouseOffset()
             {
-                // Raise flag to draw tooltip
-                drawToolTip = true;
+                currentCursorHeight = DaggerfallUnity.Settings.CursorHeight;
+                currentSystemHeight = Display.main.systemHeight;
+                currentRenderingHeight = Display.main.renderingHeight;
+                currentFullScreen = DaggerfallUnity.Settings.Fullscreen;
+                MouseOffset = new Vector2(0, 0); //currentCursorHeight * 200f / (currentFullScreen ? currentSystemHeight : currentRenderingHeight));
             }
-        }
 
-        public override void Draw()
-        {
-            if (!Enabled)
-                return;
-
-            if (drawToolTip)
+            /// <summary>
+            /// Flags tooltip to be drawn at end of UI update.
+            /// </summary>
+            /// <param name="text">Text to render inside tooltip.</param>
+            public void Draw(string text)
             {
-                base.Draw();
-
-                // Set render area for tooltip to whole screen (material might have been changed by other component, i.e. _ScissorRect might have been set to a subarea of screen (e.g. by TextLabel class))
-                Material material = font.GetMaterial();
-                Vector4 scissorRect = new Vector4(0, 1, 0, 1);
-                material.SetVector("_ScissorRect", scissorRect);
-
-                // Determine text position
-                Rect rect = Rectangle;
-                Vector2 textPos = new Vector2(
-                    rect.x + LeftMargin * Scale.x,
-                    rect.y + TopMargin * Scale.y);
-
-                //if (rect.xMax > Screen.width) textPos.x -= (rect.xMax - Screen.width);
-
-                // Draw tooltip text
-                for (int i = 0; i < textRows.Length; i++)
+                // Validate
+                if (font == null || string.IsNullOrEmpty(text))
                 {
-                    float temp = textPos.x;
-                    var calc = font.CalculateTextWidth(textRows[i], Scale);
-                    textPos.x = (rect.x) + ((rect.width - calc) / 2 * Scale.x) - (rect.width * Scale.x / 3f) - (LeftMargin / 2 * Scale.x);
-                    //Debug.Log(rect.x+","+rect.width+","+calc+","+textPos.x);
-                    font.DrawText(textRows[i], textPos, Scale, textColor);
-                    textPos.y += font.GlyphHeight * Scale.y;
-                    textPos.x = temp;
+                    drawToolTip = false;
+                    return;
                 }
 
-                // Lower flag
-                drawToolTip = false;
+                // Update text rows
+                UpdateTextRows(text);
+                if (textRows == null || textRows.Length == 0)
+                {
+                    drawToolTip = false;
+                    return;
+                }
+
+                // Set tooltip size
+                Size = new Vector2(
+                    widestRow + LeftMargin + RightMargin,
+                    font.GlyphHeight * textRows.Length + TopMargin + BottomMargin - 1);
+
+                // Set tooltip position
+                Position = new Vector2(Screen.width / 2, currentFullScreen ? currentSystemHeight / 2 : currentRenderingHeight / 2) + MouseOffset;
+
+                // Ensure tooltip inside screen area
+                Position = new Vector2(Position.x * 0.9f / LocalScale.x, Position.y * 1f / LocalScale.y);
+
+                // Check if mouse position is in parent's rectangle (to prevent tooltips out of panel's rectangle to be displayed)
+                if (Parent != null)
+                {
+                    // Raise flag to draw tooltip
+                    drawToolTip = true;
+                }
             }
-        }
 
-        #endregion
-
-        #region Private Methods
-
-        void UpdateTextRows(string text)
-        {
-            // Do nothing if text has not changed since last time
-            bool sdfState = font.IsSDFCapable;
-            if (text == lastText && sdfState == previousSDFState)
-                return;
-
-            // Split into rows based on \r escape character
-            // Text read from plain-text files will become \\r so need to replace this first
-            text = text.Replace("\\r", "\r");
-            textRows = text.Split('\r');
-
-            // Set text we just processed
-            lastText = text;
-
-            // Find widest row
-            widestRow = 0;
-            for (int i = 0; i < textRows.Length; i++)
+            public override void Draw()
             {
-                float width = font.CalculateTextWidth(textRows[i], Scale);
-                if (width > widestRow)
-                    widestRow = width;
+                if (!Enabled)
+                    return;
+
+                if (drawToolTip) {
+                    base.Draw();
+
+                    // Set render area for tooltip to whole screen (material might have been changed by other component, i.e. _ScissorRect might have been set to a subarea of screen (e.g. by TextLabel class))
+                    Material material = font.GetMaterial();
+                    Vector4 scissorRect = new Vector4(0, 1, 0, 1);
+                    material.SetVector("_ScissorRect", scissorRect);
+
+                    // Determine text position
+                    Rect rect = Rectangle;
+                    Vector2 textPos = new Vector2(
+                        rect.x + LeftMargin * LocalScale.x,
+                        rect.y + TopMargin * LocalScale.y);
+
+                    //if (rect.xMax > Screen.width) textPos.x -= (rect.xMax - Screen.width);
+
+                    // Draw tooltip text
+                    for (int i = 0; i < textRows.Length; i++)
+                    {
+                        float temp = textPos.x;
+                        var calc = font.CalculateTextWidth(textRows[i], LocalScale);
+                        textPos.x = ((rect.x) + ((widestRow - calc) / 2) * LocalScale.x + LeftMargin * LocalScale.x); //- (rect.width * Scale.x / 3f) - (LeftMargin / 2 * Scale.x);
+                        font.DrawText(textRows[i], textPos, LocalScale, TextColor);
+                        textPos.y += font.GlyphHeight * LocalScale.y;
+                        textPos.x = temp;
+
+                    }
+
+                    // Lower flag
+                    drawToolTip = false;
+                }
             }
-            previousSDFState = sdfState;
+
+            #endregion
+
+            #region Private Methods
+
+            void UpdateTextRows(string text)
+            {
+                // Do nothing if text has not changed since last time
+                bool sdfState = font.IsSDFCapable;
+                if (text == lastText && sdfState == previousSDFState)
+                    return;
+
+                // Split into rows based on \r escape character
+                // Text read from plain-text files will become \\r so need to replace this first
+                text = text.Replace("\\r", "\r");
+                textRows = text.Split('\r');
+
+                // Set text we just processed
+                lastText = text;
+
+                // Find widest row
+                widestRow = 0;
+                for (int i = 0; i < textRows.Length; i++)
+                {
+                    float width = font.CalculateTextWidth(textRows[i], LocalScale);
+                    if (width > widestRow)
+                        widestRow = width;
+                }
+                previousSDFState = sdfState;
+            }
+
+            #endregion
         }
 
         #endregion
