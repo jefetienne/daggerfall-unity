@@ -14,6 +14,7 @@ using DaggerfallWorkshop.Game.Formulas;
 using DaggerfallWorkshop.Game.Utility.ModSupport;
 using DaggerfallWorkshop.Game.Entity;
 using DaggerfallWorkshop.Game.Guilds;
+using DaggerfallWorkshop.Game.Questing;
 using DaggerfallWorkshop.Game.Items;
 using DaggerfallWorkshop.Game.Utility;
 using DaggerfallWorkshop.Game.MagicAndEffects;
@@ -265,6 +266,19 @@ namespace Modded_Tooltips_Interaction
                         {
                             ret = "Bookshelf";
                             prevDistance = PlayerActivate.DefaultActivationDistance;
+                        }
+                        else if (CheckComponent<QuestResourceBehaviour>(hit, out comp))
+                        {
+                            var qrb = (QuestResourceBehaviour)comp;
+
+                            if (qrb.TargetResource != null)
+                            {
+                                if (qrb.TargetResource is Item)
+                                {
+                                    ret = DaggerfallUnity.Instance.ItemHelper.ResolveItemLongName(((Item)qrb.TargetResource).DaggerfallUnityItem, false);
+                                    prevDistance = PlayerActivate.DefaultActivationDistance;
+                                }
+                            }
                         }
                     }
 
