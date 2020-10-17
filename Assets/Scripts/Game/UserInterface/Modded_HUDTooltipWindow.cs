@@ -129,7 +129,7 @@ namespace Modded_Tooltips_Interaction
                 .GetValue(playerActivate);
 
             tooltip = new HUDTooltip();
-            tooltip.Parent = this;
+            //tooltip.Parent = this;
             this.Components.Add(tooltip);
         }
 
