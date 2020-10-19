@@ -30,8 +30,7 @@ public class Modded_SneakCrouchFusion : MonoBehaviour {
         }
 
         //if crouch, do sneak. If sneak, do crouch.
-        // Crouch is done via action-complete
-        if (InputManager.Instance.ActionComplete(InputManager.Actions.Crouch))
+        if (InputManager.Instance.ActionStarted(InputManager.Actions.Crouch))
         {
             InputManager.Instance.AddAction(InputManager.Actions.Sneak);
         }
