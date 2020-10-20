@@ -166,6 +166,11 @@ namespace Modded_Tooltips_Interaction
                 tooltip.Draw(text);
             }
         }
+
+        public static void RegisterCustomTooltip<T>(float activationDistance, Action action)
+        {
+
+        }
         
         private string GetHoverText()
         {
@@ -450,72 +455,79 @@ namespace Modded_Tooltips_Interaction
                                     ret = "Shop Shelf";
                                     break;
                                 case LootContainerTypes.HouseContainers:
-                                    var name = hit.transform.GetComponent<MeshFilter>().mesh.name.Split(' ')[0];
-                                    var record = Convert.ToInt32(name);
-                                    switch (record)
+                                    var mesh = hit.transform.GetComponent<MeshFilter>();
+                                    if (mesh)
                                     {
-                                        case 41003:
-                                        case 41004:
-                                        case 41800:
-                                        case 41801:
-                                            ret = "Wardrobe";
-                                            break;
-                                        case 41007:
-                                        case 41008:
-                                        case 41033:
-                                        case 41038:
-                                        case 41805:
-                                        case 41810:
-                                        case 41802:
-                                            ret = "Cabinets";
-                                            break;
-                                        case 41027:
-                                            ret = "Shelf";
-                                            break;
-                                        case 41034:
-                                        case 41050:
-                                        case 41803:
-                                        case 41806:
-                                            ret = "Dresser";
-                                            break;
-                                        case 41032:
-                                        case 41035:
-                                        case 41037:
-                                        case 41051:
-                                        case 41807:
-                                        case 41804:
-                                        case 41808:
-                                        case 41809:
-                                        case 41814:
-                                            ret = "Cupboard";
-                                            break;
-                                        case 41815:
-                                        case 41816:
-                                        case 41817:
-                                        case 41818:
-                                        case 41819:
-                                        case 41820:
-                                        case 41821:
-                                        case 41822:
-                                        case 41823:
-                                        case 41824:
-                                        case 41825:
-                                        case 41826:
-                                        case 41827:
-                                        case 41828:
-                                        case 41829:
-                                        case 41830:
-                                        case 41831:
-                                        case 41832:
-                                        case 41833:
-                                        case 41834:
-                                            ret = "Crate";
-                                            break;
-                                        case 41811:
-                                        case 41812:
-                                        case 41813:
-                                            ret = "Chest";
-                                            break;
+                                        var name = mesh.mesh.name.Split(' ')[0];
+                                        int record;
+                                        if (int.TryParse(name, out record))
+                                        {
+                                            switch (record)
+                                            {
+                                                case 41003:
+                                                case 41004:
+                                                case 41800:
+                                                case 41801:
+                                                    ret = "Wardrobe";
+                                                    break;
+                                                case 41007:
+                                                case 41008:
+                                                case 41033:
+                                                case 41038:
+                                                case 41805:
+                                                case 41810:
+                                                case 41802:
+                                                    ret = "Cabinets";
+                                                    break;
+                                                case 41027:
+                                                    ret = "Shelf";
+                                                    break;
+                                                case 41034:
+                                                case 41050:
+                                                case 41803:
+                                                case 41806:
+                                                    ret = "Dresser";
+                                                    break;
+                                                case 41032:
+                                                case 41035:
+                                                case 41037:
+                                                case 41051:
+                                                case 41807:
+                                                case 41804:
+                                                case 41808:
+                                                case 41809:
+                                                case 41814:
+                                                    ret = "Cupboard";
+                                                    break;
+                                                case 41815:
+                                                case 41816:
+                                                case 41817:
+                                                case 41818:
+                                                case 41819:
+                                                case 41820:
+                                                case 41821:
+                                                case 41822:
+                                                case 41823:
+                                                case 41824:
+                                                case 41825:
+                                                case 41826:
+                                                case 41827:
+                                                case 41828:
+                                                case 41829:
+                                                case 41830:
+                                                case 41831:
+                                                case 41832:
+                                                case 41833:
+                                                case 41834:
+                                                    ret = "Crate";
+                                                    break;
+                                                case 41811:
+                                                case 41812:
+                                                case 41813:
+                                                    ret = "Chest";
+                                                    break;
+                                            }
+                                        }
                                     }
                                     break;
                             }
