@@ -298,13 +298,24 @@ namespace Modded_Tooltips_Interaction
                     {
                         if (CheckComponent<DaggerfallAction>(hit, out comp))
                         {
-                            if (((DaggerfallAction)comp).TriggerFlag == DFBlock.RdbTriggerFlags.Direct)
+                            var da = (DaggerfallAction)comp;
+                            if (da.TriggerFlag == DFBlock.RdbTriggerFlags.Direct
+                                || da.TriggerFlag == DFBlock.RdbTriggerFlags.Direct6
+                                || da.TriggerFlag == DFBlock.RdbTriggerFlags.MultiTrigger)
                             {
                                 var mesh = hit.transform.GetComponent<MeshFilter>();
                                 if (mesh)
                                 {
+                                    var ind = mesh.name.IndexOf('=');
+                                    string str;
+                                    // "DaggerfallMesh [ID=XXXXX]"
+                                    if (ind >= 0)
+                                        str = mesh.name.Substring(ind + 1, mesh.name.Length - 1 - ind - 1);
+                                    else
+                                        str = mesh.name.Split(' ')[0];
+
                                     int record;
-                                    if (int.TryParse(mesh.name.Split(' ')[0], out record))
+                                    if (int.TryParse(str, out record))
                                     {
                                         switch (record)
                                         {
