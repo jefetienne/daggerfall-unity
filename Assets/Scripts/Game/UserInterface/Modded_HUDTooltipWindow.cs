@@ -303,6 +303,7 @@ namespace Modded_Tooltips_Interaction
                                 || da.TriggerFlag == DFBlock.RdbTriggerFlags.Direct6
                                 || da.TriggerFlag == DFBlock.RdbTriggerFlags.MultiTrigger)
                             {
+                                bool multiTriggerOkay = false;
                                 var mesh = hit.transform.GetComponent<MeshFilter>();
                                 if (mesh)
                                 {
@@ -319,18 +320,57 @@ namespace Modded_Tooltips_Interaction
                                     {
                                         switch (record)
                                         {
+                                            case 74037:
+                                                ret = "Wheel";
+                                                multiTriggerOkay = true;
+                                                break;
                                             case 61027:
                                             case 61028:
                                                 ret = "Lever";
+                                                multiTriggerOkay = true;
+                                                break;
+                                            case 74143:
+                                                ret = "The Mantella";
+                                                break;
+                                            case 62323:
+                                            // Secret teleport
+                                            case 72019:
+                                            case 74215:
+                                            case 74225:
+                                                multiTriggerOkay = true;
                                                 break;
                                         }
                                     }
                                 }
+                                /*else if (CheckComponent<DaggerfallBillboard>(hit, out comp))
+                                {
+                                    var bb = ((DaggerfallBillboard)comp);
+                                    var archive = bb.Summary.Archive;
+                                    var index = bb.Summary.Record;
 
-                                if (string.IsNullOrEmpty(ret))
-                                    ret = "<Interact>";
+                                    if (archive == 211)
+                                    {
+                                        switch (index)
+                                        {
+                                            case 4:
+                                                ret = "Chain";
+                                                break;
+                                        }
+                                    }
+                                }*/
 
-                                prevDistance = PlayerActivate.DefaultActivationDistance;
+                                if (da.TriggerFlag == DFBlock.RdbTriggerFlags.MultiTrigger && !multiTriggerOkay)
+                                {
+                                    ret = null;
+                                }
+                                else
+                                {
+                                    if (string.IsNullOrEmpty(ret))
+                                        ret = "<Interact>";
+
+                                    prevDistance = PlayerActivate.DefaultActivationDistance;
+                                }
+
                             }
                         }
                         else if (CheckComponent<DaggerfallLadder>(hit, out comp))
@@ -351,7 +391,26 @@ namespace Modded_Tooltips_Interaction
                             {
                                 if (qrb.TargetResource is Item)
                                 {
-                                    ret = DaggerfallUnity.Instance.ItemHelper.ResolveItemLongName(((Item)qrb.TargetResource).DaggerfallUnityItem, false);
+                                    if (CheckComponent<DaggerfallBillboard>(hit, out comp))
+                                    {
+                                        var bb = ((DaggerfallBillboard)comp);
+                                        var archive = bb.Summary.Archive;
+                                        var index = bb.Summary.Record;
+
+                                        if (archive == 211)
+                                        {
+                                            switch (index)
+                                            {
+                                                case 54:
+                                                    ret = "The Totem of Tiber Septim";
+                                                    break;
+                                            }
+                                        }
+                                    }
+
+                                    if (string.IsNullOrEmpty(ret))
+                                        ret = DaggerfallUnity.Instance.ItemHelper.ResolveItemLongName(((Item)qrb.TargetResource).DaggerfallUnityItem, false);
+
                                     prevDistance = PlayerActivate.DefaultActivationDistance;
                                 }
                             }
