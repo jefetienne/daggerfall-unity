@@ -224,7 +224,72 @@ namespace Modded_Tooltips_Interaction
                     {
                         if (CheckComponent<StaticNPC>(hit, out comp))
                         {
-                            ret = ((StaticNPC)comp).DisplayName;
+                            var npc = ((StaticNPC)comp);
+                            if (CheckComponent<DaggerfallBillboard>(hit, out comp))
+                            {
+                                var bb = ((DaggerfallBillboard)comp);
+                                var archive = bb.Summary.Archive;
+                                var index = bb.Summary.Record;
+
+                                if (archive == 175)
+                                {
+                                    switch (index)
+                                    {
+                                        case 0:
+                                            ret = "Azura";
+                                            break;
+                                        case 1:
+                                            ret = "Boethiah";
+                                            break;
+                                        case 2:
+                                            ret = "Clavicus Vile";
+                                            break;
+                                        case 3:
+                                            ret = "Hircine";
+                                            break;
+                                        case 4:
+                                            ret = "Hermaeus Mora";
+                                            break;
+                                        case 5:
+                                            ret = "Malacath";
+                                            break;
+                                        case 6:
+                                            ret = "Mehrunes Dagon";
+                                            break;
+                                        case 7:
+                                            ret = "Mephala";
+                                            break;
+                                        case 8:
+                                            ret = "Meridia";
+                                            break;
+                                        case 9:
+                                            ret = "Molag Bal";
+                                            break;
+                                        case 10:
+                                            ret = "Namira";
+                                            break;
+                                        case 11:
+                                            ret = "Nocturnal";
+                                            break;
+                                        case 12:
+                                            ret = "Peryite";
+                                            break;
+                                        case 13:
+                                            ret = "Sanguine";
+                                            break;
+                                        case 14:
+                                            ret = "Sheogorath";
+                                            break;
+                                        case 15:
+                                            ret = "Vaermina";
+                                            break;
+                                    }
+                                }
+                            }
+
+                            if (string.IsNullOrEmpty(ret))
+                                ret = npc.DisplayName;
+
                             prevDistance = PlayerActivate.StaticNPCActivationDistance;
                         }
                     }
@@ -410,6 +475,10 @@ namespace Modded_Tooltips_Interaction
                             ret = GetStaticDoorText(doors, hit, doorOwner);
                             prevDistance = PlayerActivate.DoorActivationDistance;
                         }
+                        else
+                        {
+                            prevHit = null;
+                        }
                     }
 
                     prevText = ret;
@@ -522,7 +591,6 @@ namespace Modded_Tooltips_Interaction
 
             prevHit = null;
 
-            //Debug.Log(5);
             return null;
         }
 
