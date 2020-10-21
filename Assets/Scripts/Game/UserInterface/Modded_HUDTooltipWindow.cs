@@ -34,6 +34,8 @@ namespace Modded_Tooltips_Interaction
         //Use the farthest distance
         const float rayDistance = PlayerActivate.StaticNPCActivationDistance;
 
+        private static Dictionary<float, List<Func<RaycastHit, string>>> customGetHoverText = new Dictionary<float, List<Func<RaycastHit, string>>>();
+
         GameObject mainCamera;
         int playerLayerMask = 0;
 
@@ -130,8 +132,15 @@ namespace Modded_Tooltips_Interaction
                 .GetValue(playerActivate);
 
             tooltip = new HUDTooltip();
-            //tooltip.Parent = this;
             this.Components.Add(tooltip);
+
+            /*RegisterCustomTooltip(PlayerActivate.DefaultActivationDistance, (hit) => {
+                if (hit.transform.name.Length > 16 && hit.transform.name.Contains("DaggerfallTerrain"))
+                {
+                    return "Terrain";
+                }
+                return null;
+            });*/
         }
 
         #endregion
@@ -167,11 +176,47 @@ namespace Modded_Tooltips_Interaction
             }
         }
 
-        public static void RegisterCustomTooltip<T>(float activationDistance, Action action)
+        public static void RegisterCustomTooltip(float activationDistance, Func<RaycastHit, string> func)
         {
-
+            List<Func<RaycastHit, string>> list;
+            if (!customGetHoverText.TryGetValue(activationDistance, out list))
+            {
+                list = (customGetHoverText[activationDistance] = new List<Func<RaycastHit, string>>());
+            }
+            list.Add(func);
         }
-        
+
+        private string EnumerateCustomHoverText(RaycastHit hit)
+        {
+            if (customGetHoverText.Count == 0)
+                return null;
+
+            String res = null;
+            bool stop = false;
+            foreach (var kv in customGetHoverText)
+            {
+                if (hit.distance <= kv.Key)
+                {
+                    foreach (var func in kv.Value)
+                    {
+                        res = func(hit);
+
+                        if (!string.IsNullOrEmpty(res))
+                        {
+                            prevDistance = kv.Key;
+                            stop = true;
+                            break;
+                        }
+                    }
+
+                    if (stop)
+                        break;
+                }
+            }
+
+            return res;
+        }
+
         private string GetHoverText()
         {
             Ray ray = new Ray(mainCamera.transform.position, mainCamera.transform.forward);
@@ -197,7 +242,9 @@ namespace Modded_Tooltips_Interaction
                     object comp;
                     string ret = null;
 
-                    if (hit.transform.name.Length > 16 && hit.transform.name.Substring(0, 16) == "DaggerfallTerrain")
+                    ret = EnumerateCustomHoverText(hit);
+
+                    if (hit.transform.name.Length > 16 && hit.transform.name.Substring(0, 17) == "DaggerfallTerrain")
                         return null;
 
                     if (string.IsNullOrEmpty(ret) && hit.distance <= PlayerActivate.MobileNPCActivationDistance)
