@@ -304,213 +304,170 @@ namespace Modded_Tooltips_Interaction
                 {
                     object comp;
                     string ret = null;
+                    bool stop = false;
 
                     ret = EnumerateCustomHoverText(hit);
 
-                    // Because it's such a big object, we know there's no tooltips for it so just ignore computing everything else
-                    if (string.IsNullOrEmpty(ret) && hit.transform.name.Length > 16 && hit.transform.name.Substring(0, 17) == "DaggerfallTerrain")
-                        return null;
-
-                    // Objects with "Mobile NPC" activation distances
-                    if (string.IsNullOrEmpty(ret) && hit.distance <= PlayerActivate.MobileNPCActivationDistance)
+                    // Easy basecases
+                    if (string.IsNullOrEmpty(ret))
                     {
-                        if (CheckComponent<MobilePersonNPC>(hit, out comp))
-                        {
-                            ret = ((MobilePersonNPC)comp).NameNPC;
-                            prevDistance = PlayerActivate.MobileNPCActivationDistance;
-                        }
-                        else if (CheckComponent<DaggerfallEntityBehaviour>(hit, out comp))
-                        {
-                            EnemyMotor enemyMotor = ((DaggerfallEntityBehaviour)comp).transform.GetComponent<EnemyMotor>();
+                        if (hit.transform.name.Length > 16 && hit.transform.name.Substring(0, 17) == "DaggerfallTerrain")
+                            stop = true;
+                    }
 
-                            if (!enemyMotor || !enemyMotor.IsHostile)
+                    if (!stop)
+                    {
+                        // Objects with "Mobile NPC" activation distances
+                        if (string.IsNullOrEmpty(ret) && hit.distance <= PlayerActivate.MobileNPCActivationDistance)
+                        {
+                            if (CheckComponent<MobilePersonNPC>(hit, out comp))
                             {
-                                ret = ((DaggerfallEntityBehaviour)comp).Entity.Name;
+                                ret = ((MobilePersonNPC)comp).NameNPC;
                                 prevDistance = PlayerActivate.MobileNPCActivationDistance;
                             }
-
-                        }
-                        else if (CheckComponent<DaggerfallBulletinBoard>(hit, out comp))
-                        {
-                            ret = "Bulletin Board";
-                            prevDistance = PlayerActivate.MobileNPCActivationDistance;
-                        }
-                    }
-
-                    // Objects with "Static NPC" activation distances
-                    if (string.IsNullOrEmpty(ret) && hit.distance <= PlayerActivate.StaticNPCActivationDistance)
-                    {
-                        if (CheckComponent<StaticNPC>(hit, out comp))
-                        {
-                            var npc = ((StaticNPC)comp);
-                            if (CheckComponent<DaggerfallBillboard>(hit, out comp))
+                            else if (CheckComponent<DaggerfallEntityBehaviour>(hit, out comp))
                             {
-                                var bb = ((DaggerfallBillboard)comp);
-                                var archive = bb.Summary.Archive;
-                                var index = bb.Summary.Record;
+                                EnemyMotor enemyMotor = ((DaggerfallEntityBehaviour)comp).transform.GetComponent<EnemyMotor>();
 
-                                if (archive == 175)
+                                if (!enemyMotor || !enemyMotor.IsHostile)
                                 {
-                                    switch (index)
-                                    {
-                                        case 0:
-                                            ret = "Azura";
-                                            break;
-                                        case 1:
-                                            ret = "Boethiah";
-                                            break;
-                                        case 2:
-                                            ret = "Clavicus Vile";
-                                            break;
-                                        case 3:
-                                            ret = "Hircine";
-                                            break;
-                                        case 4:
-                                            ret = "Hermaeus Mora";
-                                            break;
-                                        case 5:
-                                            ret = "Malacath";
-                                            break;
-                                        case 6:
-                                            ret = "Mehrunes Dagon";
-                                            break;
-                                        case 7:
-                                            ret = "Mephala";
-                                            break;
-                                        case 8:
-                                            ret = "Meridia";
-                                            break;
-                                        case 9:
-                                            ret = "Molag Bal";
-                                            break;
-                                        case 10:
-                                            ret = "Namira";
-                                            break;
-                                        case 11:
-                                            ret = "Nocturnal";
-                                            break;
-                                        case 12:
-                                            ret = "Peryite";
-                                            break;
-                                        case 13:
-                                            ret = "Sanguine";
-                                            break;
-                                        case 14:
-                                            ret = "Sheogorath";
-                                            break;
-                                        case 15:
-                                            ret = "Vaermina";
-                                            break;
-                                    }
+                                    ret = ((DaggerfallEntityBehaviour)comp).Entity.Name;
+                                    prevDistance = PlayerActivate.MobileNPCActivationDistance;
                                 }
+
                             }
-
-                            if (string.IsNullOrEmpty(ret))
-                                ret = npc.DisplayName;
-
-                            prevDistance = PlayerActivate.StaticNPCActivationDistance;
-                        }
-                    }
-
-                    // Objects with "Default" activation distances
-                    if (hit.distance <= PlayerActivate.DefaultActivationDistance)
-                    {
-                        if (CheckComponent<DaggerfallAction>(hit, out comp))
-                        {
-                            var da = (DaggerfallAction)comp;
-                            if (da.TriggerFlag == DFBlock.RdbTriggerFlags.Direct
-                                || da.TriggerFlag == DFBlock.RdbTriggerFlags.Direct6
-                                || da.TriggerFlag == DFBlock.RdbTriggerFlags.MultiTrigger)
+                            else if (CheckComponent<DaggerfallBulletinBoard>(hit, out comp))
                             {
-                                bool multiTriggerOkay = false;
-                                var mesh = hit.transform.GetComponent<MeshFilter>();
-                                if (mesh)
-                                {
-                                    var ind = mesh.name.IndexOf('=');
-                                    string str;
-                                    // "DaggerfallMesh [ID=XXXXX]"
-                                    if (ind >= 0)
-                                        str = mesh.name.Substring(ind + 1, mesh.name.Length - 1 - ind - 1);
-                                    else
-                                        str = mesh.name.Split(' ')[0];
+                                ret = "Bulletin Board";
+                                prevDistance = PlayerActivate.MobileNPCActivationDistance;
+                            }
+                        }
 
-                                    int record;
-                                    if (int.TryParse(str, out record))
-                                    {
-                                        switch (record)
-                                        {
-                                            case 74037:
-                                                ret = "Wheel";
-                                                multiTriggerOkay = true;
-                                                break;
-                                            case 61027:
-                                            case 61028:
-                                                ret = "Lever";
-                                                multiTriggerOkay = true;
-                                                break;
-                                            case 74143:
-                                                ret = "The Mantella";
-                                                break;
-                                            case 62323:
-                                            // Secret teleport
-                                            case 72019:
-                                            case 74215:
-                                            case 74225:
-                                                multiTriggerOkay = true;
-                                                break;
-                                        }
-                                    }
-                                }
-                                /*else if (CheckComponent<DaggerfallBillboard>(hit, out comp))
+                        // Objects with "Static NPC" activation distances
+                        if (string.IsNullOrEmpty(ret) && hit.distance <= PlayerActivate.StaticNPCActivationDistance)
+                        {
+                            if (CheckComponent<StaticNPC>(hit, out comp))
+                            {
+                                var npc = ((StaticNPC)comp);
+                                if (CheckComponent<DaggerfallBillboard>(hit, out comp))
                                 {
                                     var bb = ((DaggerfallBillboard)comp);
                                     var archive = bb.Summary.Archive;
                                     var index = bb.Summary.Record;
 
-                                    if (archive == 211)
+                                    if (archive == 175)
                                     {
                                         switch (index)
                                         {
+                                            case 0:
+                                                ret = "Azura";
+                                                break;
+                                            case 1:
+                                                ret = "Boethiah";
+                                                break;
+                                            case 2:
+                                                ret = "Clavicus Vile";
+                                                break;
+                                            case 3:
+                                                ret = "Hircine";
+                                                break;
                                             case 4:
-                                                ret = "Chain";
+                                                ret = "Hermaeus Mora";
+                                                break;
+                                            case 5:
+                                                ret = "Malacath";
+                                                break;
+                                            case 6:
+                                                ret = "Mehrunes Dagon";
+                                                break;
+                                            case 7:
+                                                ret = "Mephala";
+                                                break;
+                                            case 8:
+                                                ret = "Meridia";
+                                                break;
+                                            case 9:
+                                                ret = "Molag Bal";
+                                                break;
+                                            case 10:
+                                                ret = "Namira";
+                                                break;
+                                            case 11:
+                                                ret = "Nocturnal";
+                                                break;
+                                            case 12:
+                                                ret = "Peryite";
+                                                break;
+                                            case 13:
+                                                ret = "Sanguine";
+                                                break;
+                                            case 14:
+                                                ret = "Sheogorath";
+                                                break;
+                                            case 15:
+                                                ret = "Vaermina";
                                                 break;
                                         }
                                     }
-                                }*/
-
-                                if (da.TriggerFlag == DFBlock.RdbTriggerFlags.MultiTrigger && !multiTriggerOkay)
-                                {
-                                    ret = null;
-                                }
-                                else
-                                {
-                                    if (string.IsNullOrEmpty(ret))
-                                        ret = "<Interact>";
-
-                                    prevDistance = PlayerActivate.DefaultActivationDistance;
                                 }
 
+                                if (string.IsNullOrEmpty(ret))
+                                    ret = npc.DisplayName;
+
+                                prevDistance = PlayerActivate.StaticNPCActivationDistance;
                             }
                         }
-                        else if (CheckComponent<DaggerfallLadder>(hit, out comp))
-                        {
-                            ret = "Ladder";
-                            prevDistance = PlayerActivate.DefaultActivationDistance;
-                        }
-                        else if (CheckComponent<DaggerfallBookshelf>(hit, out comp))
-                        {
-                            ret = "Bookshelf";
-                            prevDistance = PlayerActivate.DefaultActivationDistance;
-                        }
-                        else if (CheckComponent<QuestResourceBehaviour>(hit, out comp))
-                        {
-                            var qrb = (QuestResourceBehaviour)comp;
 
-                            if (qrb.TargetResource != null)
+                        // Objects with "Default" activation distances
+                        if (hit.distance <= PlayerActivate.DefaultActivationDistance)
+                        {
+                            if (CheckComponent<DaggerfallAction>(hit, out comp))
                             {
-                                if (qrb.TargetResource is Item)
+                                var da = (DaggerfallAction)comp;
+                                if (da.TriggerFlag == DFBlock.RdbTriggerFlags.Direct
+                                    || da.TriggerFlag == DFBlock.RdbTriggerFlags.Direct6
+                                    || da.TriggerFlag == DFBlock.RdbTriggerFlags.MultiTrigger)
                                 {
-                                    if (CheckComponent<DaggerfallBillboard>(hit, out comp))
+                                    bool multiTriggerOkay = false;
+                                    var mesh = hit.transform.GetComponent<MeshFilter>();
+                                    if (mesh)
+                                    {
+                                        var ind = mesh.name.IndexOf('=');
+                                        string str;
+                                        // "DaggerfallMesh [ID=XXXXX]"
+                                        if (ind >= 0)
+                                            str = mesh.name.Substring(ind + 1, mesh.name.Length - 1 - ind - 1);
+                                        else
+                                            str = mesh.name.Split(' ')[0];
+
+                                        int record;
+                                        if (int.TryParse(str, out record))
+                                        {
+                                            switch (record)
+                                            {
+                                                case 74037:
+                                                    ret = "Wheel";
+                                                    multiTriggerOkay = true;
+                                                    break;
+                                                case 61027:
+                                                case 61028:
+                                                    ret = "Lever";
+                                                    multiTriggerOkay = true;
+                                                    break;
+                                                case 74143:
+                                                    ret = "The Mantella";
+                                                    break;
+                                                case 62323:
+                                                // Secret teleport
+                                                case 72019:
+                                                case 74215:
+                                                case 74225:
+                                                    multiTriggerOkay = true;
+                                                    break;
+                                            }
+                                        }
+                                    }
+                                    /*else if (CheckComponent<DaggerfallBillboard>(hit, out comp))
                                     {
                                         var bb = ((DaggerfallBillboard)comp);
                                         var archive = bb.Summary.Archive;
@@ -520,167 +477,221 @@ namespace Modded_Tooltips_Interaction
                                         {
                                             switch (index)
                                             {
-                                                case 54:
-                                                    ret = "The Totem of Tiber Septim";
+                                                case 4:
+                                                    ret = "Chain";
                                                     break;
                                             }
                                         }
-                                    }
+                                    }*/
 
-                                    if (string.IsNullOrEmpty(ret))
-                                        ret = DaggerfallUnity.Instance.ItemHelper.ResolveItemLongName(((Item)qrb.TargetResource).DaggerfallUnityItem, false);
-
-                                    prevDistance = PlayerActivate.DefaultActivationDistance;
-                                }
-                            }
-                        }
-                    }
-
-                    // Checking for loot
-                    // Corpses have a different activation distance than other containers/loot
-                    if (string.IsNullOrEmpty(ret) && CheckComponent<DaggerfallLoot>(hit, out comp))
-                    {
-                        var loot = (DaggerfallLoot)comp;
-
-                        // If a corpse, and within the corpse activation distance..
-                        if (loot.ContainerType == LootContainerTypes.CorpseMarker && hit.distance <= PlayerActivate.CorpseActivationDistance)
-                        {
-                            ret = loot.entityName + " (dead)";
-                            prevDistance = PlayerActivate.CorpseActivationDistance;
-                        }
-                        else if (hit.distance <= PlayerActivate.TreasureActivationDistance)
-                        {
-                            prevDistance = PlayerActivate.TreasureActivationDistance;
-                            switch (loot.ContainerType)
-                            {
-                                case LootContainerTypes.DroppedLoot:
-                                case LootContainerTypes.RandomTreasure:
-                                    if (loot.Items.Count == 1)
+                                    if (da.TriggerFlag == DFBlock.RdbTriggerFlags.MultiTrigger && !multiTriggerOkay)
                                     {
-                                        var item = loot.Items.GetItem(0);
-                                        ret = item.LongName;
-
-                                        if (item.stackCount > 1)
-                                            ret += " (" + item.stackCount + ")";
+                                        ret = null;
                                     }
                                     else
                                     {
-                                        ret = "Loot Pile";
+                                        if (string.IsNullOrEmpty(ret))
+                                            ret = "<Interact>";
+
+                                        prevDistance = PlayerActivate.DefaultActivationDistance;
                                     }
-                                    break;
-                                case LootContainerTypes.ShopShelves:
-                                    ret = "Shop Shelf";
-                                    break;
-                                case LootContainerTypes.HouseContainers:
-                                    var mesh = hit.transform.GetComponent<MeshFilter>();
-                                    if (mesh)
+
+                                }
+                            }
+                            else if (CheckComponent<DaggerfallLadder>(hit, out comp))
+                            {
+                                ret = "Ladder";
+                                prevDistance = PlayerActivate.DefaultActivationDistance;
+                            }
+                            else if (CheckComponent<DaggerfallBookshelf>(hit, out comp))
+                            {
+                                ret = "Bookshelf";
+                                prevDistance = PlayerActivate.DefaultActivationDistance;
+                            }
+                            else if (CheckComponent<QuestResourceBehaviour>(hit, out comp))
+                            {
+                                var qrb = (QuestResourceBehaviour)comp;
+
+                                if (qrb.TargetResource != null)
+                                {
+                                    if (qrb.TargetResource is Item)
                                     {
-                                        var name = mesh.mesh.name.Split(' ')[0];
-                                        int record;
-                                        if (int.TryParse(name, out record))
+                                        if (CheckComponent<DaggerfallBillboard>(hit, out comp))
                                         {
-                                            switch (record)
+                                            var bb = ((DaggerfallBillboard)comp);
+                                            var archive = bb.Summary.Archive;
+                                            var index = bb.Summary.Record;
+
+                                            if (archive == 211)
                                             {
-                                                case 41003:
-                                                case 41004:
-                                                case 41800:
-                                                case 41801:
-                                                    ret = "Wardrobe";
-                                                    break;
-                                                case 41007:
-                                                case 41008:
-                                                case 41033:
-                                                case 41038:
-                                                case 41805:
-                                                case 41810:
-                                                case 41802:
-                                                    ret = "Cabinets";
-                                                    break;
-                                                case 41027:
-                                                    ret = "Shelf";
-                                                    break;
-                                                case 41034:
-                                                case 41050:
-                                                case 41803:
-                                                case 41806:
-                                                    ret = "Dresser";
-                                                    break;
-                                                case 41032:
-                                                case 41035:
-                                                case 41037:
-                                                case 41051:
-                                                case 41807:
-                                                case 41804:
-                                                case 41808:
-                                                case 41809:
-                                                case 41814:
-                                                    ret = "Cupboard";
-                                                    break;
-                                                case 41815:
-                                                case 41816:
-                                                case 41817:
-                                                case 41818:
-                                                case 41819:
-                                                case 41820:
-                                                case 41821:
-                                                case 41822:
-                                                case 41823:
-                                                case 41824:
-                                                case 41825:
-                                                case 41826:
-                                                case 41827:
-                                                case 41828:
-                                                case 41829:
-                                                case 41830:
-                                                case 41831:
-                                                case 41832:
-                                                case 41833:
-                                                case 41834:
-                                                    ret = "Crate";
-                                                    break;
-                                                case 41811:
-                                                case 41812:
-                                                case 41813:
-                                                    ret = "Chest";
-                                                    break;
+                                                switch (index)
+                                                {
+                                                    case 54:
+                                                        ret = "The Totem of Tiber Septim";
+                                                        break;
+                                                }
                                             }
                                         }
+
+                                        if (string.IsNullOrEmpty(ret))
+                                            ret = DaggerfallUnity.Instance.ItemHelper.ResolveItemLongName(((Item)qrb.TargetResource).DaggerfallUnityItem, false);
+
+                                        prevDistance = PlayerActivate.DefaultActivationDistance;
                                     }
-                                    break;
+                                }
+                            }
+                        }
+
+                        // Checking for loot
+                        // Corpses have a different activation distance than other containers/loot
+                        if (string.IsNullOrEmpty(ret) && CheckComponent<DaggerfallLoot>(hit, out comp))
+                        {
+                            var loot = (DaggerfallLoot)comp;
+
+                            // If a corpse, and within the corpse activation distance..
+                            if (loot.ContainerType == LootContainerTypes.CorpseMarker && hit.distance <= PlayerActivate.CorpseActivationDistance)
+                            {
+                                ret = loot.entityName + " (dead)";
+                                prevDistance = PlayerActivate.CorpseActivationDistance;
+                            }
+                            else if (hit.distance <= PlayerActivate.TreasureActivationDistance)
+                            {
+                                prevDistance = PlayerActivate.TreasureActivationDistance;
+                                switch (loot.ContainerType)
+                                {
+                                    case LootContainerTypes.DroppedLoot:
+                                    case LootContainerTypes.RandomTreasure:
+                                        if (loot.Items.Count == 1)
+                                        {
+                                            var item = loot.Items.GetItem(0);
+                                            ret = item.LongName;
+
+                                            if (item.stackCount > 1)
+                                                ret += " (" + item.stackCount + ")";
+                                        }
+                                        else
+                                        {
+                                            ret = "Loot Pile";
+                                        }
+                                        break;
+                                    case LootContainerTypes.ShopShelves:
+                                        ret = "Shop Shelf";
+                                        break;
+                                    case LootContainerTypes.HouseContainers:
+                                        var mesh = hit.transform.GetComponent<MeshFilter>();
+                                        if (mesh)
+                                        {
+                                            var name = mesh.mesh.name.Split(' ')[0];
+                                            int record;
+                                            if (int.TryParse(name, out record))
+                                            {
+                                                switch (record)
+                                                {
+                                                    case 41003:
+                                                    case 41004:
+                                                    case 41800:
+                                                    case 41801:
+                                                        ret = "Wardrobe";
+                                                        break;
+                                                    case 41007:
+                                                    case 41008:
+                                                    case 41033:
+                                                    case 41038:
+                                                    case 41805:
+                                                    case 41810:
+                                                    case 41802:
+                                                        ret = "Cabinets";
+                                                        break;
+                                                    case 41027:
+                                                        ret = "Shelf";
+                                                        break;
+                                                    case 41034:
+                                                    case 41050:
+                                                    case 41803:
+                                                    case 41806:
+                                                        ret = "Dresser";
+                                                        break;
+                                                    case 41032:
+                                                    case 41035:
+                                                    case 41037:
+                                                    case 41051:
+                                                    case 41807:
+                                                    case 41804:
+                                                    case 41808:
+                                                    case 41809:
+                                                    case 41814:
+                                                        ret = "Cupboard";
+                                                        break;
+                                                    case 41815:
+                                                    case 41816:
+                                                    case 41817:
+                                                    case 41818:
+                                                    case 41819:
+                                                    case 41820:
+                                                    case 41821:
+                                                    case 41822:
+                                                    case 41823:
+                                                    case 41824:
+                                                    case 41825:
+                                                    case 41826:
+                                                    case 41827:
+                                                    case 41828:
+                                                    case 41829:
+                                                    case 41830:
+                                                    case 41831:
+                                                    case 41832:
+                                                    case 41833:
+                                                    case 41834:
+                                                        ret = "Crate";
+                                                        break;
+                                                    case 41811:
+                                                    case 41812:
+                                                    case 41813:
+                                                        ret = "Chest";
+                                                        break;
+                                                }
+                                            }
+                                        }
+                                        break;
+                                }
+                            }
+                        }
+
+                        // Objects with the "Door" activation distances
+                        if (string.IsNullOrEmpty(ret) && hit.distance <= PlayerActivate.DoorActivationDistance)
+                        {
+                            if (CheckComponent<DaggerfallActionDoor>(hit, out comp))
+                            {
+                                var door = (DaggerfallActionDoor)comp;
+                                if (!door.IsLocked)
+                                    ret = "Door";
+                                else
+                                    ret = "Door\rLock Level: "+door.CurrentLockValue;
+
+                                prevDistance = PlayerActivate.DoorActivationDistance;
+                            }
+                        }
+
+                        // "else", look for static doors on this object. If there are any, return the specific location
+                        // Is computationally expensive and should be saved for last
+                        if (string.IsNullOrEmpty(ret))
+                        {
+                            Transform doorOwner;
+                            DaggerfallStaticDoors doors = GetDoors(hit.transform, out doorOwner);
+                            if (doors)
+                            {
+                                ret = GetStaticDoorText(doors, hit, doorOwner);
+                                prevDistance = PlayerActivate.DoorActivationDistance;
+                            }
+                            else
+                            {
+                                prevHit = null;
                             }
                         }
                     }
-
-                    // Objects with the "Door" activation distances
-                    if (string.IsNullOrEmpty(ret) && hit.distance <= PlayerActivate.DoorActivationDistance)
+                    else
                     {
-                        if (CheckComponent<DaggerfallActionDoor>(hit, out comp))
-                        {
-                            var door = (DaggerfallActionDoor)comp;
-                            if (!door.IsLocked)
-                                ret = "Door";
-                            else
-                                ret = "Door\rLock Level: "+door.CurrentLockValue;
-
-                            prevDistance = PlayerActivate.DoorActivationDistance;
-                        }
-                    }
-
-                    // "else", look for static doors on this object. If there are any, return the specific location
-                    // Is computationally expensive and should be saved for last
-                    if (string.IsNullOrEmpty(ret))
-                    {
-                        Transform doorOwner;
-                        DaggerfallStaticDoors doors = GetDoors(hit.transform, out doorOwner);
-                        if (doors)
-                        {
-                            ret = GetStaticDoorText(doors, hit, doorOwner);
-                            prevDistance = PlayerActivate.DoorActivationDistance;
-                        }
-                        else
-                        {
-                            prevHit = null;
-                        }
+                        prevHit = null;
                     }
 
                     prevText = ret;
