@@ -28,7 +28,20 @@ namespace Modded_Tooltips_Interaction
     public class Modded_HUDTooltipWindow : Panel
     {
 
+        #region Singleton
+
+        public static Modded_HUDTooltipWindow Instance { get; private set; }
+
+        #endregion
+
         #region Fields
+
+        #region Mod API
+
+        const string REGISTER_CUSTOM_TOOLTIP = "RegisterCustomTooltip";
+        static Mod mod;
+
+        #endregion
 
         #region Raycasting
         //Use the farthest distance
@@ -59,6 +72,7 @@ namespace Modded_Tooltips_Interaction
         PlayerGPS playerGPS;
         PlayerActivate playerActivate;
         HUDTooltip tooltip;
+
         #region Stolen methods/variables/properties
 
         byte[] openHours;
@@ -72,19 +86,26 @@ namespace Modded_Tooltips_Interaction
 
         #endregion
 
+        [Invoke(StateManager.StateTypes.Start, 0)]
+        public static void Init(InitParams initParams)
+        {
+            mod = initParams.Mod;
+            mod.MessageReceiver = Modded_HUDTooltipWindow.MessageReceiver;
+            mod.IsReady = true;
+        }
+
         [Invoke(StateManager.StateTypes.Game)]
         public static void InitAtGameState(InitParams initParams)
         {
-            Debug.Log("****************************tooltips2");
-            var ttw = new Modded_HUDTooltipWindow();
-
+            Debug.Log("****************************Init HUD tooltips");
+            Instance = new Modded_HUDTooltipWindow();
             Type type = DaggerfallUI.Instance.DaggerfallHUD.GetType();
             var prop = type.BaseType.GetProperty(
                 "NativePanel",
                 BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
             var nativePanel = (Panel)prop.GetValue(DaggerfallUI.Instance.DaggerfallHUD);
 
-            nativePanel.Components.Add(ttw);
+            nativePanel.Components.Add(Instance);
         }
 
         #region Constructors
@@ -176,7 +197,11 @@ namespace Modded_Tooltips_Interaction
             }
         }
 
-        public static void RegisterCustomTooltip(float activationDistance, Func<RaycastHit, string> func)
+        #endregion
+
+        #region Custom Modding API
+
+        private static void RegisterCustomTooltip(float activationDistance, Func<RaycastHit, string> func)
         {
             List<Func<RaycastHit, string>> list;
             if (!customGetHoverText.TryGetValue(activationDistance, out list))
@@ -184,7 +209,45 @@ namespace Modded_Tooltips_Interaction
                 list = (customGetHoverText[activationDistance] = new List<Func<RaycastHit, string>>());
             }
             list.Add(func);
+            Debug.Log("************World Tooltips: Registered Custom Tooltip");
         }
+
+        public static void MessageReceiver(string message, object data, DFModMessageCallback callback)
+        {
+            switch(message)
+            {
+                case REGISTER_CUSTOM_TOOLTIP:
+                    if (data == null)
+                    {
+                        Debug.LogError("MessageReceiver: data object is null");
+                        break;
+                    }
+
+                    if (!(data is System.Tuple<float, Func<RaycastHit, string>>))
+                    {
+                        Debug.LogError("MessageReceiver: data object is not of type 'System.Tuple<float, Func<RaycastHit, string>>'");
+                        break;
+                    }
+
+                    var tup = (System.Tuple<float, Func<RaycastHit, string>>)data;
+
+                    if (tup.Item2 == null)
+                    {
+                        Debug.LogError("MessageReceiver: data tuple's Func<RaycastHit, string> is null");
+                        break;
+                    }
+
+                    RegisterCustomTooltip(tup.Item1, tup.Item2);
+                    break;
+                default:
+                    Debug.LogError("MessageReceiver: invalid message");
+                    break;
+            }
+        }
+
+        #endregion
+
+        #region Private Methods
 
         private string EnumerateCustomHoverText(RaycastHit hit)
         {
@@ -244,9 +307,11 @@ namespace Modded_Tooltips_Interaction
 
                     ret = EnumerateCustomHoverText(hit);
 
-                    if (hit.transform.name.Length > 16 && hit.transform.name.Substring(0, 17) == "DaggerfallTerrain")
+                    // Because it's such a big object, we know there's no tooltips for it so just ignore computing everything else
+                    if (string.IsNullOrEmpty(ret) && hit.transform.name.Length > 16 && hit.transform.name.Substring(0, 17) == "DaggerfallTerrain")
                         return null;
 
+                    // Objects with "Mobile NPC" activation distances
                     if (string.IsNullOrEmpty(ret) && hit.distance <= PlayerActivate.MobileNPCActivationDistance)
                     {
                         if (CheckComponent<MobilePersonNPC>(hit, out comp))
@@ -272,6 +337,7 @@ namespace Modded_Tooltips_Interaction
                         }
                     }
 
+                    // Objects with "Static NPC" activation distances
                     if (string.IsNullOrEmpty(ret) && hit.distance <= PlayerActivate.StaticNPCActivationDistance)
                     {
                         if (CheckComponent<StaticNPC>(hit, out comp))
@@ -346,6 +412,7 @@ namespace Modded_Tooltips_Interaction
                         }
                     }
 
+                    // Objects with "Default" activation distances
                     if (hit.distance <= PlayerActivate.DefaultActivationDistance)
                     {
                         if (CheckComponent<DaggerfallAction>(hit, out comp))
@@ -469,10 +536,13 @@ namespace Modded_Tooltips_Interaction
                         }
                     }
 
+                    // Checking for loot
+                    // Corpses have a different activation distance than other containers/loot
                     if (string.IsNullOrEmpty(ret) && CheckComponent<DaggerfallLoot>(hit, out comp))
                     {
                         var loot = (DaggerfallLoot)comp;
 
+                        // If a corpse, and within the corpse activation distance..
                         if (loot.ContainerType == LootContainerTypes.CorpseMarker && hit.distance <= PlayerActivate.CorpseActivationDistance)
                         {
                             ret = loot.entityName + " (dead)";
@@ -581,6 +651,7 @@ namespace Modded_Tooltips_Interaction
                         }
                     }
 
+                    // Objects with the "Door" activation distances
                     if (string.IsNullOrEmpty(ret) && hit.distance <= PlayerActivate.DoorActivationDistance)
                     {
                         if (CheckComponent<DaggerfallActionDoor>(hit, out comp))
@@ -595,6 +666,8 @@ namespace Modded_Tooltips_Interaction
                         }
                     }
 
+                    // "else", look for static doors on this object. If there are any, return the specific location
+                    // Is computationally expensive and should be saved for last
                     if (string.IsNullOrEmpty(ret))
                     {
                         Transform doorOwner;
