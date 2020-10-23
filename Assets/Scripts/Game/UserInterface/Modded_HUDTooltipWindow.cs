@@ -61,6 +61,7 @@ namespace Modded_Tooltips_Interaction
         StaticDoor prevDoor;
         string prevDoorText;
         float prevDistance;
+        Dictionary<int, DoorData> doorDataDict = new Dictionary<int, DoorData>();
 
         Transform prevDoorCheckTransform;
         Transform prevDoorOwner;
@@ -155,13 +156,11 @@ namespace Modded_Tooltips_Interaction
             tooltip = new HUDTooltip();
             this.Components.Add(tooltip);
 
-            /*RegisterCustomTooltip(PlayerActivate.DefaultActivationDistance, (hit) => {
-                if (hit.transform.name.Length > 16 && hit.transform.name.Contains("DaggerfallTerrain"))
-                {
-                    return "Terrain";
-                }
-                return null;
-            });*/
+            PlayerGPS.OnMapPixelChanged += (_) =>
+            {
+                Debug.Log("***************Clearing door data cache..");
+                doorDataDict.Clear();
+            };
         }
 
         #endregion
@@ -807,6 +806,43 @@ namespace Modded_Tooltips_Interaction
             return null;
         }
 
+        class DoorData {
+            public Transform Parent;
+            public Vector3 Position;
+            public Quaternion Rotation;
+
+            public float minX;
+            public float minY;
+            public float minZ;
+            public float maxX;
+            public float maxY;
+            public float maxZ;
+
+            public DoorData(StaticDoor door, DaggerfallStaticDoors dfuStaticDoors)
+            {
+                Quaternion buildingRotation = GameObjectHelper.QuaternionFromMatrix(door.buildingMatrix);
+                Vector3 doorNormal = buildingRotation * door.normal;
+                Quaternion facingRotation = Quaternion.LookRotation(doorNormal, Vector3.up);
+
+                // Setup single trigger position and size over each door in turn
+                // This method plays nice with transforms
+                Parent = dfuStaticDoors.transform;
+                Position = dfuStaticDoors.transform.rotation * door.buildingMatrix.MultiplyPoint3x4(door.centre);
+                Position += dfuStaticDoors.transform.position;
+                Rotation = facingRotation;
+            }
+
+            public void SetMinMax(Vector3 min, Vector3 max)
+            {
+                minX = min.x;
+                minY = min.y;
+                minZ = min.z;
+                maxX = max.x;
+                maxY = max.y;
+                maxZ = max.z;
+            }
+        }
+
         /// <summary>
         /// Check for a door hit in world space.
         /// </summary>
@@ -849,21 +885,46 @@ namespace Modded_Tooltips_Interaction
 
             for (int i = 0; !found && i < Doors.Length; i++)
             {
-                //Debug.Log("DOORS ITERATE"+i);
-                Quaternion buildingRotation = GameObjectHelper.QuaternionFromMatrix(Doors[i].buildingMatrix);
-                Vector3 doorNormal = buildingRotation * Doors[i].normal;
-                Quaternion facingRotation = Quaternion.LookRotation(doorNormal, Vector3.up);
+                int hash = 23;
+                unchecked
+                {
+                    hash = hash * 31 + Doors[i].buildingKey;
+                    hash = hash * 31 + Doors[i].blockIndex;
+                    hash = hash * 31 + Doors[i].recordIndex;
+                    hash = hash * 31 + Doors[i].doorIndex;
+                    hash = hash * 31 + i;
+                }
+
+                DoorData doorData;
+                bool created = false;
+                if (!doorDataDict.TryGetValue(hash, out doorData))
+                {
+                    doorData = (doorDataDict[hash] = new DoorData(Doors[i], dfuStaticDoors));
+                    created = true;
+                }
+
+                //Debug.Log("DOORS ITERATE"+i+", hash:" + hash);
 
                 // Setup single trigger position and size over each door in turn
                 // This method plays nice with transforms
                 c.size = Doors[i].size;
-                goDoor.transform.parent = dfuStaticDoors.transform;
-                goDoor.transform.position = dfuStaticDoors.transform.rotation * Doors[i].buildingMatrix.MultiplyPoint3x4(Doors[i].centre);
-                goDoor.transform.position += dfuStaticDoors.transform.position;
-                goDoor.transform.rotation = facingRotation;
+                goDoor.transform.parent = doorData.Parent;
+                goDoor.transform.position = doorData.Position;
+                goDoor.transform.rotation = doorData.Rotation;
+
+                // Has to be after setting the parent, position, and rotation of the goDoor
+                if (created)
+                    doorData.SetMinMax(c.bounds.min, c.bounds.max);
 
                 // Check if hit was inside trigger
-                if (c.bounds.Contains(point))
+                // Much more performant
+                if (point.x >= doorData.minX
+                    && point.x < doorData.maxX
+                    && point.y >= doorData.minY
+                    && point.y < doorData.maxY
+                    && point.z >= doorData.minZ
+                    && point.z < doorData.maxZ
+                )
                 {
                     //Debug.Log("HasHit FOUND");
                     found = true;
