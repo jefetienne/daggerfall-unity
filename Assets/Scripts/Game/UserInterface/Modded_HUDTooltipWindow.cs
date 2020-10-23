@@ -22,6 +22,7 @@ using DaggerfallWorkshop.Game.MagicAndEffects.MagicEffects;
 using DaggerfallWorkshop.Game.UserInterfaceWindows;
 using DaggerfallWorkshop.Game.UserInterface;
 using DaggerfallWorkshop.Utility.AssetInjection;
+using DaggerfallWorkshop.Game.Utility.ModSupport.ModSettings;
 
 namespace Modded_Tooltips_Interaction
 {
@@ -35,6 +36,13 @@ namespace Modded_Tooltips_Interaction
         #endregion
 
         #region Fields
+
+        #region Settings
+
+        const string hideInteractTooltipText = "HideDefaultInteractTooltip";
+        public static bool HideInteractTooltip { get; private set; }
+
+        #endregion
 
         #region Mod API
 
@@ -93,6 +101,9 @@ namespace Modded_Tooltips_Interaction
             mod = initParams.Mod;
             mod.MessageReceiver = Modded_HUDTooltipWindow.MessageReceiver;
             mod.IsReady = true;
+
+            ModSettings settings = mod.GetSettings();
+            HideInteractTooltip = settings.GetValue<bool>("GeneralSettings", hideInteractTooltipText);
         }
 
         [Invoke(StateManager.StateTypes.Game)]
@@ -489,7 +500,7 @@ namespace Modded_Tooltips_Interaction
                                     }
                                     else
                                     {
-                                        if (string.IsNullOrEmpty(ret))
+                                        if (!HideInteractTooltip && string.IsNullOrEmpty(ret))
                                             ret = "<Interact>";
 
                                         prevDistance = PlayerActivate.DefaultActivationDistance;
