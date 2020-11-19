@@ -51,6 +51,7 @@ namespace DaggerfallWorkshop.Game
         const float animSpeed = 0.04f;                              // Set slower than classic for now
 
         ElementTypes currentAnimType = ElementTypes.None;
+        Dictionary<int, AnimationRecord> castAnims = new Dictionary<int, AnimationRecord>();
         AnimationRecord handRecord;
         int currentFrame = -1;
 
@@ -115,11 +116,19 @@ namespace DaggerfallWorkshop.Game
         /// </summary>
         void SetCurrentAnims(ElementTypes elementType)
         {
+            // Attempt to get current anims
+            AnimationRecord animationRecord;
+            if (castAnims.TryGetValue((int)elementType, out animationRecord))
+            {
+                currentAnimType = elementType;
+                handRecord = animationRecord;
+                return;
+            }
+
             // Load spellcast file
             string filename = WeaponBasics.GetMagicAnimFilename(elementType);
             string path = Path.Combine(DaggerfallUnity.Instance.Arena2Path, filename);
             CifRciFile cifFile = new CifRciFile();
-
             if (!cifFile.Load(path, FileUsage.UseMemory, true))
                 throw new Exception(string.Format("Could not load spell anims file {0}", path));
 
@@ -127,7 +136,7 @@ namespace DaggerfallWorkshop.Game
             cifFile.Palette.Load(Path.Combine(DaggerfallUnity.Instance.Arena2Path, cifFile.PaletteName));
 
             // Load textures - spells have a single frame per record unlike weapons
-            AnimationRecord animationRecords = new AnimationRecord();
+            animationRecord = new AnimationRecord();
 
             int record = 0;
             Texture2D texture;
@@ -147,13 +156,15 @@ namespace DaggerfallWorkshop.Game
             if (texture)
             {
                 texture.filterMode = (FilterMode)DaggerfallUnity.Settings.MainFilterMode;
-                animationRecords.Texture = texture;
-                animationRecords.Size = cifFile.GetSize(record);
+                animationRecord.Texture = texture;
+                animationRecord.Size = cifFile.GetSize(record);
             }
+
+            castAnims.Add((int)elementType, animationRecord);
 
             // Use as current anims
             currentAnimType = elementType;
-            handRecord = animationRecords;
+            handRecord = animationRecord;
         }
 
         private bool UpdateSpellCast()
@@ -216,13 +227,35 @@ namespace DaggerfallWorkshop.Game
         //the mod magic comes in here
         IEnumerator AnimateSpellCast()
         {
+            var pef = GameManager.Instance.PlayerEffectManager;
+            var psc = GameManager.Instance.PlayerSpellCasting;
             while (true)
             {
-                if (GameManager.Instance.PlayerEffectManager.HasReadySpell
-                    && GameManager.Instance.PlayerEffectManager.ReadySpell.Settings.TargetType != TargetTypes.CasterOnly
-                    && !GameManager.Instance.PlayerSpellCasting.IsPlayingAnim)
+                if (pef.HasReadySpell && pef.ReadySpell.Settings.TargetType != TargetTypes.CasterOnly && !psc.IsPlayingAnim)
                 {
                     currentFrame = 0;
+                    switch (pef.ReadySpell.Settings.ElementType)
+                    {
+                        case ElementTypes.Cold:
+                            SetCurrentAnims(ElementTypes.Cold);
+                            break;
+                        case ElementTypes.Fire:
+                            SetCurrentAnims(ElementTypes.Fire);
+                            break;
+                        case ElementTypes.Magic:
+                            SetCurrentAnims(ElementTypes.Magic);
+                            break;
+                        case ElementTypes.Poison:
+                            SetCurrentAnims(ElementTypes.Poison);
+                            break;
+                        case ElementTypes.Shock:
+                            SetCurrentAnims(ElementTypes.Shock);
+                            break;
+                        case ElementTypes.None:
+                            SetCurrentAnims(ElementTypes.None);
+                            break;
+                    }
+                    //Debug.LogFormat("Playing spell type {0}", currentAnimType.ToString());
                 }
                 else
                 {
