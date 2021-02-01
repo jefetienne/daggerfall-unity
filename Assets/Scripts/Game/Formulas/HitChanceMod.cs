@@ -18,6 +18,7 @@ using DaggerfallWorkshop.Game.MagicAndEffects;
 using DaggerfallWorkshop.Game.MagicAndEffects.MagicEffects;
 using DaggerfallWorkshop.Game.UserInterfaceWindows;
 using DaggerfallWorkshop.Game.UserInterface;
+using static DaggerfallWorkshop.Game.Formulas.FormulaHelper;
 
 namespace HitChance
 {
@@ -30,29 +31,23 @@ namespace HitChance
         public static void InitAtStartState(InitParams initParams)
         {
             mod = initParams.Mod;
-            Debug.Log("**********Started setup of : " + mod.Title);
+            Debug.Log("**********Started setup of: " + mod.Title);
             ModManager.Instance.GetComponent<MonoBehaviour>().StartCoroutine(mod.LoadAllAssetsFromBundleAsync(true));
             mod.IsReady = true;
 
 			Func<DaggerfallEntity, DaggerfallEntity, int, int, bool> hit = (a, b, c, d) => {
 				Debug.Log("**********Override hit: 100%");
-				return true;
+				return CalculateSuccessfulHit(a, b, c, d);
 			};
-			FormulaHelper.RegisterOverride(mod, "CalculateSuccessfulHit", hit);
+			RegisterOverride(mod, "CalculateSuccessfulHit", hit);
 
-			Func<DaggerfallEntity, DaggerfallEntity, int, int, DaggerfallUnityItem, int> attack = (a, b, c, d, e) => {
+			Func<DaggerfallEntity, DaggerfallEntity, bool, int, DaggerfallUnityItem, int> attack = (a, b, c, d, e) => {
 				Debug.Log("**********Override attack");
-				int? dam = CalculateAttackDamage(a, b, c, d, e);
+				int dam = CalculateAttackDamage(a, b, c, d, e);
 
-                if(dam == null)
-                    return 0;
-				
-				if(dam <= 0)
-					dam = 1;
-				
 				return (int)dam;
 			};
-			FormulaHelper.RegisterOverride(mod, "CalculateAttackDamage", attack);
+			RegisterOverride(mod, "CalculateAttackDamage", attack);
         }
 
         [Invoke(StateManager.StateTypes.Game)]
@@ -61,16 +56,17 @@ namespace HitChance
 			Debug.Log("InitAtGameState");
         }
 
-		//0.10.23
-        public static int? CalculateAttackDamage(DaggerfallEntity attacker, DaggerfallEntity target, int enemyAnimStateRecord, int weaponAnimTime, DaggerfallUnityItem weapon)
+		//0.11.0
+        public static int CalculateAttackDamage(DaggerfallEntity attacker, DaggerfallEntity target, bool isEnemyFacingAwayFromPlayer, int weaponAnimTime, DaggerfallUnityItem weapon)
         {
-            if (attacker == null || target == null) {
-                Debug.Log("attacker, target: " + attacker + "," + target);
-                return null;
-            }
+            if (attacker == null || target == null)
+                return 0;
+
+            Console.WriteLine("ddddd");
 
             int damageModifiers = 0;
             int damage = 0;
+            int chanceToHitMod = 0;
             int backstabChance = 0;
             PlayerEntity player = GameManager.Instance.PlayerEntity;
             short skillID = 0;
@@ -103,8 +99,7 @@ namespace HitChance
                     {
                         DaggerfallUI.Instance.PopupMessage(TextManager.Instance.GetLocalizedText("materialIneffective"));
                     }
-                    Debug.Log("ineffective");
-                    return null;
+                    return 0;
                 }
                 // Get weapon skill used
                 skillID = weapon.GetWeaponSkillIDAsShort();
@@ -114,34 +109,43 @@ namespace HitChance
                 skillID = (short)DFCareer.Skills.HandToHand;
             }
 
+            chanceToHitMod = attacker.Skills.GetLiveSkillValue(skillID);
+
             if (attacker == player)
             {
                 // Apply swing modifiers
-                FormulaHelper.ToHitAndDamageMods swingMods = FormulaHelper.CalculateSwingModifiers(GameManager.Instance.WeaponManager.ScreenWeapon);
+                ToHitAndDamageMods swingMods = CalculateSwingModifiers(GameManager.Instance.WeaponManager.ScreenWeapon);
                 damageModifiers += swingMods.damageMod;
+                chanceToHitMod += swingMods.toHitMod;
 
                 // Apply proficiency modifiers
-                FormulaHelper.ToHitAndDamageMods proficiencyMods = FormulaHelper.CalculateProficiencyModifiers(attacker, weapon);
+                ToHitAndDamageMods proficiencyMods = CalculateProficiencyModifiers(attacker, weapon);
                 damageModifiers += proficiencyMods.damageMod;
+                chanceToHitMod += proficiencyMods.toHitMod;
 
                 // Apply racial bonuses
-                FormulaHelper.ToHitAndDamageMods racialMods = FormulaHelper.CalculateRacialModifiers(attacker, weapon, player);
+                ToHitAndDamageMods racialMods = CalculateRacialModifiers(attacker, weapon, player);
                 damageModifiers += racialMods.damageMod;
+                chanceToHitMod += racialMods.toHitMod;
 
-                backstabChance = FormulaHelper.CalculateBackstabChance(player, null, enemyAnimStateRecord);
+                backstabChance = CalculateBackstabChance(player, null, isEnemyFacingAwayFromPlayer);
+                chanceToHitMod += backstabChance;
             }
 
             // Choose struck body part
-            int struckBodyPart = FormulaHelper.CalculateStruckBodyPart();
+            int struckBodyPart = CalculateStruckBodyPart();
 
             // Get damage for weaponless attacks
             if (skillID == (short)DFCareer.Skills.HandToHand)
             {
                 if (attacker == player || (AIAttacker != null && AIAttacker.EntityType == EntityTypes.EnemyClass))
                 {
-					damage = FormulaHelper.CalculateHandToHandAttackDamage(attacker, target, damageModifiers, attacker == player);
+                    if (CalculateSuccessfulHit(attacker, target, chanceToHitMod, struckBodyPart))
+                    {
+                        damage = CalculateHandToHandAttackDamage(attacker, target, damageModifiers, attacker == player);
 
-					damage = FormulaHelper.CalculateBackstabDamage(damage, backstabChance);
+                        damage = CalculateBackstabDamage(damage, backstabChance);
+                    }
                 }
                 else if (AIAttacker != null) // attacker is a monster
                 {
@@ -169,15 +173,21 @@ namespace HitChance
 
                         int reflexesChance = 50 - (10 * ((int)player.Reflexes - 2));
 
-                        if (DFRandom.rand() % 100 < reflexesChance && minBaseDamage > 0)
+                        int hitDamage = 0;
+                        if (DFRandom.rand() % 100 < reflexesChance && minBaseDamage > 0 && CalculateSuccessfulHit(attacker, target, chanceToHitMod, struckBodyPart))
                         {
-                            int hitDamage = UnityEngine.Random.Range(minBaseDamage, maxBaseDamage + 1);
+                            hitDamage = UnityEngine.Random.Range(minBaseDamage, maxBaseDamage + 1);
                             // Apply special monster attack effects
                             if (hitDamage > 0)
-                                FormulaHelper.OnMonsterHit(AIAttacker, target, hitDamage);
+                                OnMonsterHit(AIAttacker, target, hitDamage);
 
                             damage += hitDamage;
                         }
+
+                        // Apply bonus damage only when monster has actually hit, or they will accumulate bonus damage even for missed attacks and zero-damage attacks
+                        if (hitDamage > 0)
+                            damage += GetBonusOrPenaltyByEnemyType(attacker, target);
+
                         ++attackNumber;
                     }
                 }
@@ -185,22 +195,32 @@ namespace HitChance
             // Handle weapon attacks
             else if (weapon != null)
             {
-				damage = FormulaHelper.CalculateWeaponAttackDamage(attacker, target, damageModifiers, weaponAnimTime, weapon);
+                // Apply weapon material modifier.
+                chanceToHitMod += CalculateWeaponToHit(weapon);
 
-				damage = FormulaHelper.CalculateBackstabDamage(damage, backstabChance);
+                // Mod hook for adjusting final hit chance mod and adding new elements to calculation. (no-op in DFU)
+                chanceToHitMod = AdjustWeaponHitChanceMod(attacker, target, chanceToHitMod, weaponAnimTime, weapon);
+
+                if (CalculateSuccessfulHit(attacker, target, chanceToHitMod, struckBodyPart))
+                {
+                    damage = CalculateWeaponAttackDamage(attacker, target, damageModifiers, weaponAnimTime, weapon);
+
+                    damage = CalculateBackstabDamage(damage, backstabChance);
+                }
 
                 // Handle poisoned weapons
                 if (damage > 0 && weapon.poisonType != Poisons.None)
                 {
-                    FormulaHelper.InflictPoison(target, weapon.poisonType, false);
+                    InflictPoison(target, weapon.poisonType, false);
                     weapon.poisonType = Poisons.None;
                 }
             }
 
-            damage = Mathf.Max(0, damage);
-            Debug.Log("duper: " + damage);
+            //**HARDERFALL**
+            damage = Mathf.Max(1, damage);
+            Console.WriteLine(damage);
 
-            FormulaHelper.DamageEquipment(attacker, target, damage, weapon, struckBodyPart);
+            DamageEquipment(attacker, target, damage, weapon, struckBodyPart);
 
             // Apply Ring of Namira effect
             if (target == player)
@@ -219,13 +239,20 @@ namespace HitChance
                     }
                 }
             }
-            //Debug.LogFormat("Damage {0} applied, animTime={1}  ({2})", damage, weaponAnimTime, GameManager.Instance.WeaponManager.ScreenWeapon.WeaponState);
+            Debug.LogFormat("Damage {0} applied, animTime={1}  ({2})", damage, weaponAnimTime, GameManager.Instance.WeaponManager.ScreenWeapon.WeaponState);
 
-            Debug.Log("damage: " + damage);
-            return (int?)damage;
+            return damage;
         }
 
-		private static bool IsRingOfNamira(DaggerfallUnityItem item)
+        public static bool CalculateSuccessfulHit(DaggerfallEntity attacker, DaggerfallEntity target, int chanceToHitMod, int struckBodyPart)
+        {
+            if (attacker == null || target == null)
+                return false;
+
+            return true;
+        }
+
+        private static bool IsRingOfNamira(DaggerfallUnityItem item)
         {
             return item != null && item.ContainsEnchantment(DaggerfallConnect.FallExe.EnchantmentTypes.SpecialArtifactEffect, (int)ArtifactsSubTypes.Ring_of_Namira);
         }
