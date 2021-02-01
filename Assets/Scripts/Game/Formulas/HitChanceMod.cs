@@ -62,8 +62,6 @@ namespace HitChance
             if (attacker == null || target == null)
                 return 0;
 
-            Console.WriteLine("ddddd");
-
             int damageModifiers = 0;
             int damage = 0;
             int chanceToHitMod = 0;
@@ -218,7 +216,6 @@ namespace HitChance
 
             //**HARDERFALL**
             damage = Mathf.Max(1, damage);
-            Console.WriteLine(damage);
 
             DamageEquipment(attacker, target, damage, weapon, struckBodyPart);
 
@@ -239,7 +236,7 @@ namespace HitChance
                     }
                 }
             }
-            Debug.LogFormat("Damage {0} applied, animTime={1}  ({2})", damage, weaponAnimTime, GameManager.Instance.WeaponManager.ScreenWeapon.WeaponState);
+            //Debug.LogFormat("Damage {0} applied, animTime={1}  ({2})", damage, weaponAnimTime, GameManager.Instance.WeaponManager.ScreenWeapon.WeaponState);
 
             return damage;
         }
