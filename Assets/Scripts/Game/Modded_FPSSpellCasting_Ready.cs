@@ -78,9 +78,6 @@ namespace DaggerfallWorkshop.Game
 
         void Start()
         {
-            //set it to fire to initialize the hands
-            SetCurrentAnims(ElementTypes.Fire);
-            UpdateSpellCast();
             StartCoroutine(AnimateSpellCast());
         }
 
@@ -94,7 +91,7 @@ namespace DaggerfallWorkshop.Game
 
             // Update drawing positions for this frame
             // Does nothing if no animation is playing
-            if (currentFrame < 0)
+            if (!UpdateSpellCast())
                 return;
 
             if (Event.current.type.Equals(EventType.Repaint))
@@ -169,6 +166,10 @@ namespace DaggerfallWorkshop.Game
 
         private bool UpdateSpellCast()
         {
+            // Do nothing if cast frame < 0
+            if (currentFrame < 0)
+                return false;
+
             // Get frame dimensions
             int frameIndex = 0;
             int width = handRecord.Size.Width;
