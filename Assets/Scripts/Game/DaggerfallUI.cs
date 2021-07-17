@@ -13,6 +13,7 @@ using UnityEngine;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using DaggerfallConnect;
 using DaggerfallConnect.Arena2;
 using DaggerfallConnect.Utility;
@@ -745,10 +746,12 @@ namespace DaggerfallWorkshop.Game
             pauseOptionsDropdownItems.Add(new System.Tuple<string, Action>(text, action));
         }
 
-        // Hide the list in order to prevent direct insertion from modders without registering
-        public System.Tuple<string, Action>[] GetPauseOptionsDropdownItems()
+        /// <summary>
+        /// Returns shallow copied list of registered dropdown items in alphabetical order
+        /// </summary>
+        public IEnumerable<System.Tuple<string, Action>> GetPauseOptionsDropdownItems()
         {
-            return pauseOptionsDropdownItems.ToArray();
+            return pauseOptionsDropdownItems.OrderBy(it => it.Item1);
         }
 
         public void PopupMessage(string text)
